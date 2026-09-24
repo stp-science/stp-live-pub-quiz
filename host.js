@@ -334,9 +334,46 @@ $('#saveMarksBtn').onclick=async()=>{
 function renderLeaderboard(){
   const sorted=[...state.teams].sort((a,b)=>(b.totalScore||0)-(a.totalScore||0));
   $('#hostLeaderboard').innerHTML=sorted.length?sorted.map((t,i)=>`<div class="leader-row"><div class="place">${i+1}</div><div class="name">${escapeHtml(t.name)}</div><div class="score">${formatScore(t.totalScore)}</div></div>`).join(''):'<p class="muted">No teams yet.</p>';
-  $('#toggleLeaderboardBtn').textContent=state.quiz?.revealLeaderboard?'Hide leaderboard':'Reveal leaderboard';
+
+  const live=!!state.quiz?.revealLeaderboard;
+  $('#toggleLeaderboardBtn').textContent=live?'Hide leaderboard':'Reveal leaderboard';
+  const badge=$('#leaderboardVisibility');
+  if(badge){
+    badge.textContent=live?'🟢 LIVE on teams & projector':'⚫ Hidden from teams & projector';
+    badge.classList.toggle('status-open',live);
+  }
 }
-$('#toggleLeaderboardBtn').onclick=()=>state.quiz&&updateDoc(doc(db,'quizzes',quizId()),{revealLeaderboard:!state.quiz.revealLeaderboard});
+
+$('#toggleLeaderboardBtn').onclick=async()=>{
+  if(!state.quiz)return;
+  const btn=$('#toggleLeaderboardBtn');
+  const revealing=!state.quiz.revealLeaderboard;
+  btn.disabled=true;
+  try{
+    // Keep the public leaderboard snapshot in sync before making it visible.
+    if(revealing){
+      const batch=writeBatch(db);
+      state.teams.forEach(t=>{
+        batch.set(
+          doc(db,'quizzes',quizId(),'leaderboard',t.uid),
+          {name:t.name,score:Number(t.totalScore||0)},
+          {merge:true}
+        );
+      });
+      batch.update(doc(db,'quizzes',quizId()),{revealLeaderboard:true,updatedAt:serverTimestamp()});
+      await batch.commit();
+      toast('Leaderboard is now LIVE on team and projector screens');
+    }else{
+      await updateDoc(doc(db,'quizzes',quizId()),{revealLeaderboard:false,updatedAt:serverTimestamp()});
+      toast('Leaderboard hidden from teams and projector');
+    }
+  }catch(e){
+    console.error('Leaderboard toggle failed',e);
+    toast('Leaderboard error: '+(e?.message||e));
+  }finally{
+    btn.disabled=false;
+  }
+};
 
 function renderTeamManager(){
   $('#teamManager').innerHTML=state.teams.length?state.teams.map(t=>`<div class="list-row"><div><strong>${escapeHtml(t.name)}</strong><div class="muted tiny">${t.jokerUsedRoundId?'Joker used':'Joker available'} • adjustment ${formatScore(t.manualAdjustment||0)}</div></div><div class="actions"><button class="btn ghost" data-adjust="${t.uid}">Adjust</button><button class="btn danger" data-remove-team="${t.uid}">Remove</button></div></div>`).join(''):'<p class="muted">No teams have joined.</p>';
