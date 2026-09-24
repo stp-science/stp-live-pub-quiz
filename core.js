@@ -132,7 +132,7 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:11,
+  contentVersion:12,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -141,11 +141,11 @@ export const sampleQuiz={
       instructions:'Five everyday objects shown extremely close up. Ask only: “What is this?”',
       jokerAllowed:true,
       questions:[
-        {id:'zoom1',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/MatchStickHead.jpg',answerMode:'text',accepted:['match','matchstick','match stick','match head','matchstick head'],points:1},
+        {id:'zoom1',prompt:'What is this?',mediaUrl:'https://cs10.pikabu.ru/post_img/big/2019/09/21/6/1569053581154576343.jpg',answerMode:'text',accepted:['match','matchstick','match stick','match head','matchstick head'],points:1},
         {id:'zoom2',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Velcro_hooks.jpg',answerMode:'text',accepted:['velcro','hook and loop','hook-and-loop','velcro hooks'],points:1},
         {id:'zoom3',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Rooibos_tisane_tea_bag_close_up.jpg',answerMode:'text',accepted:['tea bag','teabag','tea bags'],points:1},
         {id:'zoom4',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tennis_Ball_Felt_Zoom-In_View.jpg',answerMode:'text',accepted:['tennis ball','a tennis ball','tennis ball felt'],points:1},
-        {id:'zoom5',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Dill_pickle_chips.jpg',answerMode:'text',accepted:['chips','chip','potato chips','potato chip','crisps','crisp'],points:1}
+        {id:'zoom5',prompt:'What is this?',mediaUrl:'https://mikrula.ru/content/f/0/12/image3.jpg',answerMode:'text',accepted:['chips','chip','potato chips','potato chip','crisps','crisp'],points:1}
       ]
     },
     {
