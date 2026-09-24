@@ -4,7 +4,7 @@
   <section id="authGate" class="card hero"><h1>Host your quiz.</h1><p>Sign in with Google so only you can edit questions, see answer keys and control marking.</p><button id="signInBtn" class="btn primary big">Sign in with Google</button><p class="muted tiny" style="margin-top:14px">Enable Google sign-in in Firebase Authentication first. Setup instructions are included in the project.</p></section>
   <div id="hostApp" class="hidden">
     <div id="desktopSetup" class="grid two">
-      <section class="card"><div class="actions" style="justify-content:space-between"><div><div class="muted tiny">QUIZ</div><select id="quizSelect"></select></div><div class="actions"><button id="createSampleBtn" class="btn primary">+ Pub quiz</button><button id="createBlankBtn" class="btn ghost">+ Blank</button></div></div><div id="quizSummary" style="margin-top:18px"></div></section>
+      <section class="card"><div class="actions" style="justify-content:space-between"><div><div class="muted tiny">QUIZ</div><select id="quizSelect"></select></div><div class="actions"><button id="createSampleBtn" class="btn primary">+ Pub quiz</button><button id="createBlankBtn" class="btn ghost">+ Blank</button><button id="deleteQuizBtn" class="btn danger">Delete quiz</button></div></div><div id="quizSummary" style="margin-top:18px"></div></section>
       <section class="card"><div class="muted tiny">JOIN CODE</div><div id="joinCode" class="quiz-code">------</div><div class="actions" style="margin-top:12px"><button id="copyJoinBtn" class="btn ghost">Copy team link</button><a id="presentLink" class="btn good" target="_blank">Open presentation</a><button id="toggleJoinBtn" class="btn ghost">Close joining</button></div></section>
     </div>
     <div class="tabs" style="margin-top:18px"><button class="btn tab active" data-tab="live">Live control</button><button id="buildTabBtn" class="btn tab" data-tab="build">Build quiz</button><button class="btn tab" data-tab="mark">Mark round</button><button class="btn tab" data-tab="teams">Teams & scores</button></div>
@@ -39,4 +39,4 @@
     setPhoneMode(on);
   });
 })();
-</script><script type="module" src="host.js?v=20260924-quiz2"></script></body></html>
+</script><script type="module" src="host.js?v=20260924-delete1"></script></body></html>
