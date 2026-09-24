@@ -1,10 +1,10 @@
-// Paste the Firebase web app configuration from Firebase Console > Project settings > Your apps.
-// Firebase's web config is designed to be public; access is protected by Authentication + Firestore Rules.
+// Firebase web app configuration for STP Live Pub Quiz.
+// This browser config is public by design; access is protected by Authentication + Firestore Rules.
 export const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.firebasestorage.app",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+  apiKey: "AIzaSyBaYhNFwKV2OBfaWSPY-e-UARGbNfsyrTI",
+  authDomain: "stp-live-pub-quiz.firebaseapp.com",
+  projectId: "stp-live-pub-quiz",
+  storageBucket: "stp-live-pub-quiz.firebasestorage.app",
+  messagingSenderId: "950106068041",
+  appId: "1:950106068041:web:137d52e42c1ce677711b98"
 };
