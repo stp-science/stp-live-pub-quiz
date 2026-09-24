@@ -132,20 +132,20 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:10,
+  contentVersion:11,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
     {
       title:'Zoomed In',icon:'🔎',type:'picture',
-      instructions:'Five extreme close-ups. Ask only: “What is this?”',
+      instructions:'Five everyday objects shown extremely close up. Ask only: “What is this?”',
       jokerAllowed:true,
       questions:[
-        {id:'zoom1',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tennis_ball_closeup.jpg',answerMode:'text',accepted:['tennis ball','a tennis ball'],points:1},
-        {id:'zoom2',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/LCD_pixels_RGB.jpg',answerMode:'text',accepted:['screen pixels','pixels','lcd pixels','display pixels','computer screen pixels','phone screen pixels','screen'],points:1},
-        {id:'zoom3',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/BallpointMacro.jpg',answerMode:'text',accepted:['ballpoint pen','pen tip','ballpoint pen tip','biro','biro tip','pen'],points:1},
-        {id:'zoom4',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Zipper_slider_0000_02.jpg',answerMode:'text',accepted:['zip','zipper','zipper slider','zip slider'],points:1},
-        {id:'zoom5',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Kiwifruit_skin..jpg',answerMode:'text',accepted:['kiwi fruit','kiwifruit','kiwi','kiwi skin','kiwifruit skin'],points:1}
+        {id:'zoom1',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/MatchStickHead.jpg',answerMode:'text',accepted:['match','matchstick','match stick','match head','matchstick head'],points:1},
+        {id:'zoom2',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Velcro_hooks.jpg',answerMode:'text',accepted:['velcro','hook and loop','hook-and-loop','velcro hooks'],points:1},
+        {id:'zoom3',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Rooibos_tisane_tea_bag_close_up.jpg',answerMode:'text',accepted:['tea bag','teabag','tea bags'],points:1},
+        {id:'zoom4',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tennis_Ball_Felt_Zoom-In_View.jpg',answerMode:'text',accepted:['tennis ball','a tennis ball','tennis ball felt'],points:1},
+        {id:'zoom5',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Dill_pickle_chips.jpg',answerMode:'text',accepted:['chips','chip','potato chips','potato chip','crisps','crisp'],points:1}
       ]
     },
     {
