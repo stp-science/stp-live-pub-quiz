@@ -110,7 +110,19 @@ export function mediaEmbed(url=''){
   if(!url)return'';
   const safe=escapeHtml(url);
   const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/);
-  if(yt)return`<div class="media-frame"><iframe src="https://www.youtube.com/embed/${yt[1]}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;
+  if(yt){
+    let extras='';
+    try{
+      const parsed=new URL(url);
+      const start=Math.max(0,parseInt(parsed.searchParams.get('start')||'0',10)||0);
+      const end=Math.max(0,parseInt(parsed.searchParams.get('end')||'0',10)||0);
+      const bits=[];
+      if(start)bits.push('start='+start);
+      if(end)bits.push('end='+end);
+      if(bits.length)extras='?'+bits.join('&');
+    }catch(e){}
+    return`<div class="media-frame"><iframe src="https://www.youtube.com/embed/${yt[1]}${extras}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;
+  }
   const vm=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if(vm)return`<div class="media-frame"><iframe src="https://player.vimeo.com/video/${vm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   const dm=url.match(/dailymotion\.com\/video\/([A-Za-z0-9]+)/);
@@ -120,7 +132,7 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:4,
+  contentVersion:5,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -177,14 +189,14 @@ export const sampleQuiz={
     },
     {
       title:'Watch Closely',icon:'👀',type:'video',
-      instructions:'Play the Whodunnit? video ONCE and PAUSE at 0:56, before the video reveals the changes. Then read the five questions. Do not replay until answers are submitted.',
+      instructions:'Play the Paddington clip ONCE. Students should watch carefully because the five questions come afterwards. Do not replay until all answers are submitted.',
       jokerAllowed:true,
       questions:[
-        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://www.youtube.com/watch?v=G0p9oKyK4vQ',fallbackMediaUrl:'https://www.dailymotion.com/video/x7ad5p',hostLink:'https://www.youtube.com/watch?v=G0p9oKyK4vQ',hostLinkLabel:'Open HD video',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
-        {id:'watch2',prompt:'What happened to the dead body on the floor during the scene?',mediaUrl:'',answerMode:'text',accepted:['it changed','body changed','the body changed','different body','different man','different person','the man changed','the person changed','corpse changed','victim changed'],points:1},
-        {id:'watch3',prompt:'What colour did the detective’s coat change to?',mediaUrl:'',answerMode:'text',accepted:['white','cream','light','light coloured','light colored'],points:1},
-        {id:'watch4',prompt:'What kitchen object was replaced by a candelabra?',mediaUrl:'',answerMode:'text',accepted:['rolling pin','a rolling pin'],points:1},
-        {id:'watch5',prompt:'Name the floor furnishing that changed during the scene.',mediaUrl:'',answerMode:'text',accepted:['rug','carpet','the rug','the carpet'],points:1}
+        {id:'watch1',prompt:'What did Paddington call Mr Brown’s toothbrushes?',mediaUrl:'https://www.youtube.com/watch?v=xTye8Mj5hpU&start=0&end=60',hostLink:'https://www.youtube.com/watch?v=xTye8Mj5hpU',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['ear brushes','ear brush','earbrushes','earbrush'],points:1},
+        {id:'watch2',prompt:'What was Jonathan about to slide down?',mediaUrl:'',answerMode:'text',accepted:['banister','the banister','banisters','a banister','stair banister','stair rail','railing'],points:1},
+        {id:'watch3',prompt:'What percentage of pre-breakfast accidents did Mr Brown say involve banisters?',mediaUrl:'',answerMode:'number',numericAnswer:34,tolerance:0,points:1,placeholder:'%'},
+        {id:'watch4',prompt:'Which household appliance switched on after the crash?',mediaUrl:'',answerMode:'text',accepted:['vacuum cleaner','vacuum','hoover','a vacuum cleaner','the vacuum cleaner'],points:1},
+        {id:'watch5',prompt:'What nickname did Mrs Brown use when speaking to Judy?',mediaUrl:'',answerMode:'text',accepted:['pumpkin','pumpkin darling'],points:1}
       ]
     },
     {
