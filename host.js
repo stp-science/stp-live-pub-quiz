@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-media2';
+} from './core.js?v=20260924-media3';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -95,7 +95,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=2)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=3)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -124,18 +124,18 @@ async function ensureBuiltInQuizContent(id){
       }
 
       if(title==='Watch Closely' && questions[0]){
-        questions[0].mediaUrl='https://vimeo.com/453279523';
-        questions[0].hostLink='https://vimeo.com/453279523';
+        questions[0].mediaUrl='https://www.dailymotion.com/video/x7ad5p';
+        questions[0].hostLink='https://www.dailymotion.com/video/x7ad5p';
         questions[0].hostLinkLabel='Open video';
         batch.update(hrRef,{questions});
         changed=true;
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:2,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:3,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=2;
+    state.quiz.contentVersion=3;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
