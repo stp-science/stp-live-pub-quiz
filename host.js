@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-paddington2';
+} from './core.js?v=20260924-paddington3';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -95,7 +95,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=6)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=7)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -125,15 +125,15 @@ async function ensureBuiltInQuizContent(id){
 
       if(title==='Watch Closely'){
         const newQuestions=[
-          {id:'watch1',prompt:'What did Paddington call Mr Brown’s toothbrushes?',mediaUrl:'https://www.youtube.com/watch?v=3EnoCe7DinU',hostLink:'https://www.youtube.com/watch?v=3EnoCe7DinU',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['ear brushes','ear brush','earbrushes','earbrush'],points:1},
-          {id:'watch2',prompt:'What was Jonathan about to slide down?',mediaUrl:'',answerMode:'text',accepted:['banister','the banister','banisters','a banister','stair banister','stair rail','railing'],points:1},
-          {id:'watch3',prompt:'What percentage of pre-breakfast accidents did Mr Brown say involve banisters?',mediaUrl:'',answerMode:'number',numericAnswer:34,tolerance:0,points:1,placeholder:'%'},
-          {id:'watch4',prompt:'Which household appliance switched on after the crash?',mediaUrl:'',answerMode:'text',accepted:['vacuum cleaner','vacuum','hoover','a vacuum cleaner','the vacuum cleaner'],points:1},
-          {id:'watch5',prompt:'What nickname did Mrs Brown use when speaking to Judy?',mediaUrl:'',answerMode:'text',accepted:['pumpkin','pumpkin darling'],points:1}
+          {id:'watch1',prompt:'What did Paddington use to clean his ears?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['toothbrush','toothbrushes','a toothbrush','two toothbrushes'],points:1},
+          {id:'watch2',prompt:'How many toothbrushes did Paddington use?',mediaUrl:'',answerMode:'number',numericAnswer:2,tolerance:0,points:1},
+          {id:'watch3',prompt:'Which bathroom fixture did Paddington accidentally block?',mediaUrl:'',answerMode:'text',accepted:['toilet','the toilet','loo'],points:1},
+          {id:'watch4',prompt:'What did Paddington ride down the stairs in?',mediaUrl:'',answerMode:'text',accepted:['bath','bathtub','bath tub','the bath','the bathtub'],points:1},
+          {id:'watch5',prompt:'What yellow object was with Paddington after the crash?',mediaUrl:'',answerMode:'text',accepted:['rubber duck','duck','a rubber duck','yellow duck','rubber ducky'],points:1}
         ];
         batch.update(hrRef,{questions:newQuestions});
         batch.update(rd.ref,{
-          instructions:'Play the Bathroom Troubles clip once. For the observation section, use the roughly one-minute sequence beginning with Mr Brown brushing his teeth and ending after “All I was trying to do was wash my face.” Then ask the five questions. Do not replay until answers are submitted.',
+          instructions:'Play the Paddington bathroom clip once. Students watch only — do not show the questions until the clip finishes. Do not replay until all answers are submitted.',
           inputs:newQuestions.map(inputDescriptor),
           questionCount:5,
           maxPoints:5
@@ -142,10 +142,10 @@ async function ensureBuiltInQuizContent(id){
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:6,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:7,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=6;
+    state.quiz.contentVersion=7;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
