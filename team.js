@@ -89,9 +89,25 @@ function collectAnswers(){
 function saveDraft(){try{localStorage.setItem(draftKey(),JSON.stringify(collectAnswers()))}catch{}}
 function loadDraft(){try{return JSON.parse(localStorage.getItem(draftKey())||'null')}catch{return null}}
 async function submitAnswers(){
-  const r=currentRound();if(!r||r.status!=='open')return toast('The round is locked.');
+  const r=currentRound();
+  if(!r||r.status!=='open')return toast('The round is locked.');
   const answers=collectAnswers(),id=`${state.user.uid}_${r.id}`;
-  await setDoc(doc(db,'quizzes',state.quiz.id,'submissions',id),{teamUid:state.user.uid,roundId:r.id,answers,marked:false,submittedAt:serverTimestamp()},{merge:true});localStorage.removeItem(draftKey());toast('Round submitted');
+  const btn=$('#submitBtn');
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  try{
+    await setDoc(
+      doc(db,'quizzes',state.quiz.id,'submissions',id),
+      {teamUid:state.user.uid,roundId:r.id,answers,marked:false,submittedAt:serverTimestamp()},
+      {merge:true}
+    );
+    localStorage.removeItem(draftKey());
+    toast('Round submitted');
+  }catch(e){
+    console.error('Submission failed',e);
+    toast('Submission failed: '+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=currentSub()?'Update answers':'Submit round';}
+  }
 }
 async function playJoker(){
   const r=currentRound();if(!r||r.status!=='ready'||state.team.jokerUsedRoundId)return;
