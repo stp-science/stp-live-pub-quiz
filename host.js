@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-musicfix1';
+} from './core.js?v=20260924-zoom2';
 import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai-fallback1';
 
 const state = {
@@ -106,7 +106,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=10)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=11)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -114,12 +114,30 @@ async function ensureBuiltInQuizContent(id){
 
     for(const rd of roundsSnap.docs){
       const title=rd.data().title;
-      if(title!=='Name That Tune' && title!=='Watch Closely')continue;
+      if(title!=='Name That Tune' && title!=='Watch Closely' && title!=='Zoomed In')continue;
       const hrRef=doc(db,'quizzes',id,'hostRounds',rd.id);
       const hrSnap=await getDoc(hrRef);
       if(!hrSnap.exists())continue;
       const data=hrSnap.data();
       const questions=structuredClone(data.questions||[]);
+
+      if(title==='Zoomed In'){
+        const newQuestions=[
+          {id:'zoom1',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/MatchStickHead.jpg',answerMode:'text',accepted:['match','matchstick','match stick','match head','matchstick head'],points:1},
+          {id:'zoom2',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Velcro_hooks.jpg',answerMode:'text',accepted:['velcro','hook and loop','hook-and-loop','velcro hooks'],points:1},
+          {id:'zoom3',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Rooibos_tisane_tea_bag_close_up.jpg',answerMode:'text',accepted:['tea bag','teabag','tea bags'],points:1},
+          {id:'zoom4',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tennis_Ball_Felt_Zoom-In_View.jpg',answerMode:'text',accepted:['tennis ball','a tennis ball','tennis ball felt'],points:1},
+          {id:'zoom5',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Dill_pickle_chips.jpg',answerMode:'text',accepted:['chips','chip','potato chips','potato chip','crisps','crisp'],points:1}
+        ];
+        batch.update(hrRef,{questions:newQuestions});
+        batch.update(rd.ref,{
+          instructions:'Five everyday objects shown extremely close up. Ask only: “What is this?”',
+          inputs:newQuestions.map(inputDescriptor),
+          questionCount:5,
+          maxPoints:5
+        });
+        changed=true;
+      }
 
       if(title==='Name That Tune'){
         const links=[
@@ -153,10 +171,10 @@ async function ensureBuiltInQuizContent(id){
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:10,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:11,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=10;
+    state.quiz.contentVersion=11;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
