@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function quiz(quizId) { return get(/databases/$(database)/documents/quizzes/$(quizId)).data; }
+    function isHost(quizId) { return signedIn() && quiz(quizId).hostUid == request.auth.uid; }
+    function round(quizId, roundId) { return get(/databases/$(database)/documents/quizzes/$(quizId)/rounds/$(roundId)).data; }
+
+    match /joinCodes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.hostUid == request.auth.uid
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow update, delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+
+      match /rounds/{roundId} {
+        allow read: if signedIn();
+        allow write: if isHost(quizId);
+      }
+
+      match /hostRounds/{roundId} {
+        allow read, write: if isHost(quizId);
+      }
+
+      match /teams/{teamId} {
+        allow read: if isHost(quizId) || (signedIn() && request.auth.uid == teamId);
+        allow create: if signedIn()
+          && request.auth.uid == teamId
+          && quiz(quizId).joinOpen == true
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.totalScore == 0
+          && request.resource.data.manualAdjustment == 0
+          && request.resource.data.jokerUsedRoundId == null;
+        allow update, delete: if isHost(quizId);
+      }
+
+      match /submissions/{submissionId} {
+        allow read: if isHost(quizId) || (signedIn() && resource.data.teamUid == request.auth.uid);
+        allow create: if signedIn()
+          && request.resource.data.teamUid == request.auth.uid
+          && request.resource.data.roundId == quiz(quizId).currentRoundId
+          && round(quizId, request.resource.data.roundId).status == 'open'
+          && request.resource.data.marked == false;
+        allow update: if isHost(quizId) || (
+          signedIn()
+          && resource.data.teamUid == request.auth.uid
+          && request.resource.data.teamUid == request.auth.uid
+          && request.resource.data.roundId == resource.data.roundId
+          && request.resource.data.roundId == quiz(quizId).currentRoundId
+          && round(quizId, request.resource.data.roundId).status == 'open'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers','submittedAt','marked'])
+          && request.resource.data.marked == false
+        );
+        allow delete: if isHost(quizId);
+      }
+
+      match /jokerClaims/{claimId} {
+        allow read: if isHost(quizId) || (signedIn() && resource.data.teamUid == request.auth.uid);
+        allow create: if signedIn()
+          && request.resource.data.teamUid == request.auth.uid
+          && request.resource.data.roundId == quiz(quizId).currentRoundId
+          && round(quizId, request.resource.data.roundId).status == 'ready'
+          && round(quizId, request.resource.data.roundId).jokerAllowed == true
+          && get(/databases/$(database)/documents/quizzes/$(quizId)/teams/$(request.auth.uid)).data.jokerUsedRoundId == null;
+        allow update, delete: if isHost(quizId);
+      }
+
+      match /leaderboard/{teamId} {
+        allow read: if isHost(quizId) || (signedIn() && quiz(quizId).revealLeaderboard == true);
+        allow write: if isHost(quizId);
+      }
+    }
+  }
+}
