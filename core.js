@@ -48,7 +48,7 @@ export function markOne(question,response){
   const max=Number(question.points??1),mode=question.answerMode||'text';
   if(mode==='number'){const got=Number(response),target=Number(question.numericAnswer),tol=Math.abs(Number(question.tolerance??0));if(!Number.isFinite(got))return{points:0,status:'wrong',note:'Not a number'};return Math.abs(got-target)<=tol?{points:max,status:'correct',note:`Within ±${tol}`}:{points:0,status:'wrong',note:`Expected ${target}${tol?` ±${tol}`:''}`};}
   if(mode==='split'){
-    const parts=Array.isArray(response)?response:[],keys=question.partAnswers||[];
+    const parts=Array.isArray(response)?response:(response&&typeof response==='object'?Object.keys(response).filter(k=>/^part\d+$/.test(k)).sort((a,b)=>Number(a.slice(4))-Number(b.slice(4))).map(k=>response[k]??''):[]),keys=question.partAnswers||[];
     let points=0;const details=[];
     keys.forEach((key,i)=>{
       const accepted=(key.accepted||[]).map(normalizeAnswer).filter(Boolean);
