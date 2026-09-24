@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-quiz1';
+} from './core.js?v=20260924-media2';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -81,6 +81,8 @@ async function selectQuiz(id){
     if(!snap.exists()) throw new Error('Quiz no longer exists.');
     state.quiz={id:snap.id,...snap.data()};
     localStorage.setItem('stpHostQuiz',id);
+    await ensureBuiltInQuizContent(id);
+    if(generation!==state.detailGeneration)return;
     renderAll();
     subscribeQuizDetail(id,generation);
   }catch(e){
@@ -89,6 +91,55 @@ async function selectQuiz(id){
     toast('Could not open quiz: '+e.message);
   }finally{
     if(generation===state.detailGeneration)state.selectingQuizId=null;
+  }
+}
+
+async function ensureBuiltInQuizContent(id){
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=2)return;
+  try{
+    const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
+    const batch=writeBatch(db);
+    let changed=false;
+
+    for(const rd of roundsSnap.docs){
+      const title=rd.data().title;
+      if(title!=='Name That Tune' && title!=='Watch Closely')continue;
+      const hrRef=doc(db,'quizzes',id,'hostRounds',rd.id);
+      const hrSnap=await getDoc(hrRef);
+      if(!hrSnap.exists())continue;
+      const data=hrSnap.data();
+      const questions=structuredClone(data.questions||[]);
+
+      if(title==='Name That Tune'){
+        const links=[
+          'https://www.youtube.com/watch?v=DiTd771WumE',
+          'https://www.youtube.com/watch?v=V9PVRfjEBTI',
+          'https://www.youtube.com/watch?v=4NRXx6U8ABQ',
+          'https://www.youtube.com/watch?v=LFasFq4GJYM',
+          'https://www.youtube.com/watch?v=HgzGwKwLmgM'
+        ];
+        questions.forEach((q,i)=>{if(links[i]){q.hostLink=links[i];q.hostLinkLabel='Open song';}});
+        batch.update(hrRef,{questions});
+        changed=true;
+      }
+
+      if(title==='Watch Closely' && questions[0]){
+        questions[0].mediaUrl='https://vimeo.com/453279523';
+        questions[0].hostLink='https://vimeo.com/453279523';
+        questions[0].hostLinkLabel='Open video';
+        batch.update(hrRef,{questions});
+        changed=true;
+      }
+    }
+
+    batch.update(doc(db,'quizzes',id),{contentVersion:2,updatedAt:serverTimestamp()});
+    await batch.commit();
+    state.hostRounds.clear();
+    state.quiz.contentVersion=2;
+    if(changed)toast('Quiz media links updated');
+  }catch(e){
+    console.error('Quiz content update failed',e);
+    toast('Could not update quiz media links: '+(e?.message||e));
   }
 }
 
@@ -129,7 +180,7 @@ async function createQuiz(template){
     // quiz already exists and belongs to the signed-in host.
     const parentBatch=writeBatch(db);
     parentBatch.set(doc(db,'quizzes',id),{
-      title:src.title,hostUid:state.user.uid,joinCode,status:'lobby',joinOpen:true,
+      title:src.title,hostUid:state.user.uid,joinCode,status:'lobby',joinOpen:true,contentVersion:Number(src.contentVersion||0),
       currentRoundId:null,revealLeaderboard:false,revealTopN:src.settings?.revealTopN||5,
       timerEndsAt:null,createdAt:serverTimestamp(),updatedAt:serverTimestamp()
     });
@@ -284,7 +335,7 @@ function renderLivePanel(){
   const mediaPreview=currentMedia
     ? `<div class="card" style="margin-top:12px;padding:12px"><div class="muted tiny" style="margin-bottom:8px">HOST PREVIEW — ITEM ${currentIndex+1}</div><div style="max-height:360px;overflow:auto">${mediaEmbed(currentMedia)}</div></div>`
     : `<div class="card" style="margin-top:12px;padding:12px"><div class="muted tiny">HOST PREVIEW — ITEM ${currentIndex+1}</div><p class="muted" style="margin-bottom:0">No media on this item. The projector will show the question number only.</p></div>`;
-  box.innerHTML=`<div class="muted tiny">CURRENT ROUND</div><h2>${r.icon||'🎲'} ${escapeHtml(r.title)}</h2><p>${escapeHtml(r.instructions||'')}</p><div class="actions"><span class="pill">Status: <strong class="status-${r.status}">${r.status}</strong></span><span class="pill">${subs.length}/${state.teams.length} submitted</span><span class="pill">${currentRoundClaims().length} joker${currentRoundClaims().length===1?'':'s'}</span></div><div class="divider"></div><div class="actions"><button class="btn primary" id="readyBtn">Ready</button><button class="btn good" id="openBtn">Open answers</button><button class="btn danger" id="lockBtn">Lock round</button><button class="btn ghost" id="revealBtn">Reveal answers</button></div><div class="divider"></div><div class="card" style="padding:14px;background:#091525"><div class="muted tiny">READ ALOUD — QUESTION ${currentIndex+1}</div><div style="font-size:1.12rem;font-weight:850;line-height:1.35;margin-top:7px">${escapeHtml(currentHostQuestion?.prompt||`Question ${currentIndex+1}`)}</div>${r.status==='revealed'?`<div style="margin-top:10px"><span class="pill">Answer: ${escapeHtml(hostAnswerText(currentHostQuestion))}</span></div>`:''}</div><div class="divider"></div><h3>Current item</h3><p class="muted tiny">Question text above is host-only. The projector shows only media or the question number.</p><div class="actions"><button class="btn ghost" id="prevQBtn">← Previous item</button><span class="pill">Item ${Math.min((r.currentQuestion||0)+1,r.questionCount||1)} / ${r.questionCount||0}</span><button class="btn ghost" id="nextQBtn">Next item →</button></div>${mediaPreview}<div class="divider"></div><h3>Timer</h3><div class="actions"><button class="btn ghost" data-timer="30">30 sec</button><button class="btn ghost" data-timer="60">60 sec</button><button class="btn ghost" data-timer="90">90 sec</button><button class="btn ghost" data-timer="0">Stop</button>${timer!==null?`<span class="pill">Timer running</span>`:''}</div><div class="divider"></div><h3>Still waiting</h3><p class="muted">${waiting.length?waiting.map(t=>escapeHtml(t.name)).join(', '):'Everyone has submitted.'}</p>`;
+  box.innerHTML=`<div class="muted tiny">CURRENT ROUND</div><h2>${r.icon||'🎲'} ${escapeHtml(r.title)}</h2><p>${escapeHtml(r.instructions||'')}</p><div class="actions"><span class="pill">Status: <strong class="status-${r.status}">${r.status}</strong></span><span class="pill">${subs.length}/${state.teams.length} submitted</span><span class="pill">${currentRoundClaims().length} joker${currentRoundClaims().length===1?'':'s'}</span></div><div class="divider"></div><div class="actions"><button class="btn primary" id="readyBtn">Ready</button><button class="btn good" id="openBtn">Open answers</button><button class="btn danger" id="lockBtn">Lock round</button><button class="btn ghost" id="revealBtn">Reveal answers</button></div><div class="divider"></div><div class="card" style="padding:14px;background:#091525"><div class="muted tiny">READ ALOUD — QUESTION ${currentIndex+1}</div><div style="font-size:1.12rem;font-weight:850;line-height:1.35;margin-top:7px">${escapeHtml(currentHostQuestion?.prompt||`Question ${currentIndex+1}`)}</div>${currentHostQuestion?.hostLink?`<div class="actions" style="margin-top:12px"><a class="btn good" target="_blank" rel="noopener noreferrer" href="${escapeHtml(currentHostQuestion.hostLink)}">▶ ${escapeHtml(currentHostQuestion.hostLinkLabel||'Open media')}</a></div>`:''}${r.status==='revealed'?`<div style="margin-top:10px"><span class="pill">Answer: ${escapeHtml(hostAnswerText(currentHostQuestion))}</span></div>`:''}</div><div class="divider"></div><h3>Current item</h3><p class="muted tiny">Question text above is host-only. The projector shows only media or the question number.</p><div class="actions"><button class="btn ghost" id="prevQBtn">← Previous item</button><span class="pill">Item ${Math.min((r.currentQuestion||0)+1,r.questionCount||1)} / ${r.questionCount||0}</span><button class="btn ghost" id="nextQBtn">Next item →</button></div>${mediaPreview}<div class="divider"></div><h3>Timer</h3><div class="actions"><button class="btn ghost" data-timer="30">30 sec</button><button class="btn ghost" data-timer="60">60 sec</button><button class="btn ghost" data-timer="90">90 sec</button><button class="btn ghost" data-timer="0">Stop</button>${timer!==null?`<span class="pill">Timer running</span>`:''}</div><div class="divider"></div><h3>Still waiting</h3><p class="muted">${waiting.length?waiting.map(t=>escapeHtml(t.name)).join(', '):'Everyone has submitted.'}</p>`;
   $('#readyBtn').onclick=()=>setRoundStatus('ready');
   $('#openBtn').onclick=()=>setRoundStatus('open');
   $('#lockBtn').onclick=()=>setRoundStatus('locked');
