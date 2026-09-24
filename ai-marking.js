@@ -1,4 +1,4 @@
-import { app } from './firebase.js?v=20260924-ai-debug2';
+import { app, getFreshAppCheckToken } from './firebase.js?v=20260924-ai-debug3';
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-ai.js';
 
 const ai = getAI(app, { backend: new GoogleAIBackend() });
@@ -28,6 +28,12 @@ const model = getGenerativeModel(ai, {
 
 export async function judgeQuizAnswers(items = []) {
   if (!items.length) return new Map();
+
+  try {
+    await getFreshAppCheckToken();
+  } catch (e) {
+    throw new Error('APPCHECK_FAILED: ' + (e?.message || String(e)));
+  }
   const payload = items.map(x => ({
     id: x.id,
     question: x.question,
@@ -41,7 +47,7 @@ export async function judgeQuizAnswers(items = []) {
   } catch (e) {
     const code = e?.code || e?.name || 'AI_ERROR';
     const message = e?.message || String(e);
-    throw new Error(code + ': ' + message);
+    throw new Error('GEMINI_FAILED ' + code + ': ' + message);
   }
   let parsed;
   try {
