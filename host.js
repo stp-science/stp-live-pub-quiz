@@ -2,12 +2,12 @@ import {
   auth, db, googleProvider, signInWithPopup, onAuthStateChanged, signOut,
   doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where,
   onSnapshot, getDocs, serverTimestamp, writeBatch
-} from './firebase.js';
+} from './firebase.js?v=20260924-ai-debug2';
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
 } from './core.js?v=20260924-ai3';
-import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai1';
+import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai-debug2';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
