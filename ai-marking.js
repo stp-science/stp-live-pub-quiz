@@ -17,14 +17,27 @@ const responseSchema = Schema.object({
   }
 });
 
-const model = getGenerativeModel(ai, {
-  model: 'gemini-3.8-flash',
-  generationConfig: {
-    responseMimeType: 'application/json',
-    responseSchema,
-    temperature: 0
-  }
-});
+const modelNames = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+
+function makeModel(modelName) {
+  return getGenerativeModel(ai, {
+    model: modelName,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema,
+      temperature: 0
+    }
+  });
+}
+
+function isRetryableModelError(e) {
+  const msg=(e?.message||String(e)).toLowerCase();
+  return msg.includes('[500]') ||
+    msg.includes('[503]') ||
+    msg.includes('high demand') ||
+    msg.includes('unavailable') ||
+    msg.includes('resource exhausted');
+}
 
 export async function judgeQuizAnswers(items = []) {
   if (!items.length) return new Map();
@@ -41,13 +54,22 @@ export async function judgeQuizAnswers(items = []) {
     studentAnswer: x.studentAnswer
   }));
   const prompt = 'Mark every item exactly once. Return correct only when the student answer is clearly equivalent to an expected answer. Return incorrect when clearly different. Return review when meaning is plausible but uncertain. ITEMS:\n' + JSON.stringify(payload);
-  let result;
-  try {
-    result = await model.generateContent(prompt);
-  } catch (e) {
-    const code = e?.code || e?.name || 'AI_ERROR';
-    const message = e?.message || String(e);
-    throw new Error('GEMINI_FAILED ' + code + ': ' + message);
+  let result=null;
+  let lastError=null;
+  for(const modelName of modelNames){
+    try{
+      result=await makeModel(modelName).generateContent(prompt);
+      break;
+    }catch(e){
+      lastError=e;
+      if(!isRetryableModelError(e))break;
+    }
+  }
+  if(!result){
+    const e=lastError;
+    const code=e?.code||e?.name||'AI_ERROR';
+    const message=e?.message||String(e);
+    throw new Error('GEMINI_FAILED '+code+': '+message);
   }
   let parsed;
   try {
