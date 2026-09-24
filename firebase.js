@@ -8,7 +8,7 @@ import {
   collection, query, where, orderBy, onSnapshot, getDocs,
   serverTimestamp, writeBatch, increment
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js';
 import { firebaseConfig, recaptchaEnterpriseKey } from './firebase-config.js';
 
 if (!firebaseConfig.projectId || firebaseConfig.projectId === 'REPLACE_ME') {
@@ -36,3 +36,10 @@ export {
   doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query,
   where, orderBy, onSnapshot, getDocs, serverTimestamp, writeBatch, increment
 };
+
+export async function getFreshAppCheckToken() {
+  if (!appCheck) throw new Error('App Check is not initialised.');
+  const result = await getToken(appCheck, true);
+  if (!result?.token) throw new Error('App Check returned no token.');
+  return result.token;
+}
