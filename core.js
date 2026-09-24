@@ -120,7 +120,7 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:3,
+  contentVersion:4,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -180,7 +180,7 @@ export const sampleQuiz={
       instructions:'Play the Whodunnit? video ONCE and PAUSE at 0:56, before the video reveals the changes. Then read the five questions. Do not replay until answers are submitted.',
       jokerAllowed:true,
       questions:[
-        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://www.dailymotion.com/video/x7ad5p',hostLink:'https://www.dailymotion.com/video/x7ad5p',hostLinkLabel:'Open video',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
+        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://www.youtube.com/watch?v=G0p9oKyK4vQ',fallbackMediaUrl:'https://www.dailymotion.com/video/x7ad5p',hostLink:'https://www.youtube.com/watch?v=G0p9oKyK4vQ',hostLinkLabel:'Open HD video',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
         {id:'watch2',prompt:'What happened to the dead body on the floor during the scene?',mediaUrl:'',answerMode:'text',accepted:['it changed','body changed','the body changed','different body','different man','different person','the man changed','the person changed','corpse changed','victim changed'],points:1},
         {id:'watch3',prompt:'What colour did the detective’s coat change to?',mediaUrl:'',answerMode:'text',accepted:['white','cream','light','light coloured','light colored'],points:1},
         {id:'watch4',prompt:'What kitchen object was replaced by a candelabra?',mediaUrl:'',answerMode:'text',accepted:['rolling pin','a rolling pin'],points:1},
