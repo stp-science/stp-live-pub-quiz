@@ -2,7 +2,7 @@ import {
   auth, db, signInAnonymously, onAuthStateChanged, doc, getDoc, setDoc,
   collection, query, where, onSnapshot, serverTimestamp
 } from './firebase.js';
-import { $, $$, escapeHtml, slugifyCode, formatScore, msToClock } from './core.js';
+import { $, $$, escapeHtml, slugifyCode, formatScore, msToClock } from './core.js?v=20260924-musicfix1';
 
 const state={user:null,quiz:null,rounds:[],team:null,subs:[],claims:[],unsubs:[],leaderUnsub:null,timer:null};
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),2200)}
@@ -11,6 +11,22 @@ function currentRound(){return state.rounds.find(r=>r.id===state.quiz?.currentRo
 function currentSub(){const r=currentRound();return r?state.subs.find(s=>s.roundId===r.id):null}
 function currentClaim(){const r=currentRound();return r?state.claims.find(c=>c.roundId===r.id):null}
 function draftKey(){const r=currentRound();return r&&state.quiz?`stpDraft:${state.quiz.id}:${r.id}`:''}
+function splitParts(value){
+  if(Array.isArray(value))return value;
+  if(value&&typeof value==='object'){
+    return Object.keys(value)
+      .filter(k=>/^part\d+$/.test(k))
+      .sort((a,b)=>Number(a.slice(4))-Number(b.slice(4)))
+      .map(k=>value[k]??'');
+  }
+  return [];
+}
+function displayAnswer(value){
+  if(Array.isArray(value))return value.join(' / ');
+  if(value&&typeof value==='object')return splitParts(value).join(' / ');
+  return value??'—';
+}
+
 
 const paramCode=new URLSearchParams(location.search).get('code'); if(paramCode) $('#codeInput').value=slugifyCode(paramCode);
 $('#codeInput').oninput=e=>e.target.value=slugifyCode(e.target.value);
@@ -117,13 +133,22 @@ function answerSheetHtml(r,sub){
 }
 function inputHtml(inp,i,value){
   const label=`Answer ${i+1}`,mode=inp.mode||'text';
-  if(mode==='split')return `<div class="answer-row"><strong>${label}</strong><div class="grid two" style="margin-top:8px">${(inp.partLabels||['Part 1','Part 2']).map((p,j)=>`<div class="field"><label>${escapeHtml(p)}</label><input class="big-input" data-answer="${i}" data-part="${j}" value="${escapeHtml(Array.isArray(value)?(value[j]||''):'')}"></div>`).join('')}</div></div>`;
+  if(mode==='split'){const parts=splitParts(value);return `<div class="answer-row"><strong>${label}</strong><div class="grid two" style="margin-top:8px">${(inp.partLabels||['Part 1','Part 2']).map((p,j)=>`<div class="field"><label>${escapeHtml(p)}</label><input class="big-input" data-answer="${i}" data-part="${j}" value="${escapeHtml(parts[j]||'')}"></div>`).join('')}</div></div>`;}
   if(mode==='choice')return `<div class="answer-row"><div class="field"><label>${label}</label><select class="big-input" data-answer="${i}"><option value="">Choose…</option>${(inp.choices||[]).map(c=>`<option value="${escapeHtml(c)}" ${String(value||'')===String(c)?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></div></div>`;
   const type=['number','closest'].includes(mode)?'number':'text';return `<div class="answer-row"><div class="field"><label>${label}</label><input class="big-input" type="${type}" step="${type==='number'?'any':''}" data-answer="${i}" value="${escapeHtml(value??'')}" placeholder="${escapeHtml(inp.placeholder||'Answer')}"></div></div>`;
 }
 function collectAnswers(){
   const r=currentRound(), out=new Array(r.inputs?.length||0).fill('');
-  (r.inputs||[]).forEach((inp,i)=>{if(inp.mode==='split'){out[i]=(inp.partLabels||[]).map((_,j)=>$(`[data-answer="${i}"][data-part="${j}"]`)?.value.trim()||'')}else out[i]=$(`[data-answer="${i}"]`)?.value.trim()||''});return out;
+  (r.inputs||[]).forEach((inp,i)=>{
+    if(inp.mode==='split'){
+      const obj={};
+      (inp.partLabels||[]).forEach((_,j)=>{obj['part'+j]=$(`[data-answer="${i}"][data-part="${j}"]`)?.value.trim()||''});
+      out[i]=obj;
+    }else{
+      out[i]=$(`[data-answer="${i}"]`)?.value.trim()||'';
+    }
+  });
+  return out;
 }
 function saveDraft(){try{localStorage.setItem(draftKey(),JSON.stringify(collectAnswers()))}catch{}}
 function loadDraft(){try{return JSON.parse(localStorage.getItem(draftKey())||'null')}catch{return null}}
@@ -152,12 +177,12 @@ async function playJoker(){
   const r=currentRound();if(!r||r.status!=='ready'||state.team.jokerUsedRoundId)return;
   const id=`${state.user.uid}_${r.id}`;await setDoc(doc(db,'quizzes',state.quiz.id,'jokerClaims',id),{teamUid:state.user.uid,roundId:r.id,createdAt:serverTimestamp()});toast('Joker played!');
 }
-function submittedAnswersHtml(r,sub){return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>`<div class="answer-row"><span class="muted">Answer ${i+1}:</span> <strong>${escapeHtml(Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'—'))}</strong></div>`).join('')}</div>`}
+function submittedAnswersHtml(r,sub){return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>`<div class="answer-row"><span class="muted">Answer ${i+1}:</span> <strong>${escapeHtml(displayAnswer(sub.answers?.[i]))}</strong></div>`).join('')}</div>`}
 
 function revealedAnswersHtml(r,sub){
   return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>{
     const result=sub.markResults?.[i]||{points:0,status:'wrong',note:''};
-    const answer=Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'—');
+    const answer=displayAnswer(sub.answers?.[i]);
     const pts=Number(result.points||0);
     const status=result.status||'wrong';
     const icon=status==='correct'?'✓':status==='partial'?'◐':'✗';
