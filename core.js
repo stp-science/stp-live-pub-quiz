@@ -106,8 +106,19 @@ export function roundMaxPoints(round){return(round.questions||[]).reduce((sum,q)
 export function inputDescriptor(question,idx){const mode=question.answerMode||'text';return{id:question.id||`q${idx+1}`,label:question.shortLabel||`Question ${idx+1}`,mode,partLabels:mode==='split'?(question.partAnswers||[]).map((p,j)=>p.label||`Part ${j+1}`):[],choices:mode==='choice'?(question.choices||['A','B','C','D']):[],placeholder:question.placeholder||''};}
 export function beep(freq=700,duration=.12){try{const ctx=new(window.AudioContext||window.webkitAudioContext)(),osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=freq;osc.connect(gain);gain.connect(ctx.destination);gain.gain.setValueAtTime(.08,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);osc.start();osc.stop(ctx.currentTime+duration);}catch{}}
 export function msToClock(ms){const total=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(total/60),s=total%60;return`${m}:${String(s).padStart(2,'0')}`;}
-export function mediaEmbed(url=''){if(!url)return'';const safe=escapeHtml(url),yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/);if(yt)return`<div class="media-frame"><iframe src="https://www.youtube.com/embed/${yt[1]}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;if(/\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url))return`<audio controls preload="metadata" src="${safe}"></audio>`;if(/\.(mp4|webm|mov)(\?|$)/i.test(url))return`<video controls preload="metadata" src="${safe}"></video>`;return`<img class="question-media" src="${safe}" alt="Question media">`;}
+export function mediaEmbed(url=''){
+  if(!url)return'';
+  const safe=escapeHtml(url);
+  const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/);
+  if(yt)return`<div class="media-frame"><iframe src="https://www.youtube.com/embed/${yt[1]}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;
+  const vm=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if(vm)return`<div class="media-frame"><iframe src="https://player.vimeo.com/video/${vm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  if(/\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url))return`<audio controls preload="metadata" src="${safe}"></audio>`;
+  if(/\.(mp4|webm|mov)(\?|$)/i.test(url))return`<video controls preload="metadata" src="${safe}"></video>`;
+  return`<img class="question-media" src="${safe}" alt="Question media">`;
+}
 export const sampleQuiz={
+  contentVersion:2,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -140,23 +151,23 @@ export const sampleQuiz={
       instructions:'Play about 6–8 seconds from your music service. One point for song title and one for artist. Keep the projector on the question number so the title is not revealed.',
       jokerAllowed:true,
       questions:[
-        {id:'music1',prompt:'Music clip 1 — play APT. (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+        {id:'music1',prompt:'Music clip 1 — play APT. (about 6–8 seconds).',mediaUrl:'',hostLink:'https://www.youtube.com/watch?v=DiTd771WumE',hostLinkLabel:'Open song',answerMode:'split',points:2,partAnswers:[
           {label:'Song',accepted:['apt','apt.'],points:1},
           {label:'Artist',accepted:['rose and bruno mars','rosé and bruno mars','bruno mars and rose','bruno mars and rosé','rose & bruno mars','rosé & bruno mars'],points:1}
         ]},
-        {id:'music2',prompt:'Music clip 2 — play BIRDS OF A FEATHER (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+        {id:'music2',prompt:'Music clip 2 — play BIRDS OF A FEATHER (about 6–8 seconds).',mediaUrl:'',hostLink:'https://www.youtube.com/watch?v=V9PVRfjEBTI',hostLinkLabel:'Open song',answerMode:'split',points:2,partAnswers:[
           {label:'Song',accepted:['birds of a feather'],points:1},
           {label:'Artist',accepted:['billie eilish'],points:1}
         ]},
-        {id:'music3',prompt:'Music clip 3 — play Blinding Lights (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+        {id:'music3',prompt:'Music clip 3 — play Blinding Lights (about 6–8 seconds).',mediaUrl:'',hostLink:'https://www.youtube.com/watch?v=4NRXx6U8ABQ',hostLinkLabel:'Open song',answerMode:'split',points:2,partAnswers:[
           {label:'Song',accepted:['blinding lights'],points:1},
           {label:'Artist',accepted:['the weeknd','weeknd'],points:1}
         ]},
-        {id:'music4',prompt:'Music clip 4 — play Royals (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+        {id:'music4',prompt:'Music clip 4 — play Royals (about 6–8 seconds).',mediaUrl:'',hostLink:'https://www.youtube.com/watch?v=LFasFq4GJYM',hostLinkLabel:'Open song',answerMode:'split',points:2,partAnswers:[
           {label:'Song',accepted:['royals'],points:1},
           {label:'Artist',accepted:['lorde'],points:1}
         ]},
-        {id:'music5',prompt:'Music clip 5 — play Don’t Stop Me Now (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+        {id:'music5',prompt:'Music clip 5 — play Don’t Stop Me Now (about 6–8 seconds).',mediaUrl:'',hostLink:'https://www.youtube.com/watch?v=HgzGwKwLmgM',hostLinkLabel:'Open song',answerMode:'split',points:2,partAnswers:[
           {label:'Song',accepted:["don't stop me now",'dont stop me now'],points:1},
           {label:'Artist',accepted:['queen'],points:1}
         ]}
@@ -167,7 +178,7 @@ export const sampleQuiz={
       instructions:'Play the Whodunnit? video ONCE and PAUSE at 0:56, before the video reveals the changes. Then read the five questions. Do not replay until answers are submitted.',
       jokerAllowed:true,
       questions:[
-        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://www.youtube.com/watch?v=ubNF9QNEQLA',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
+        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://vimeo.com/453279523',hostLink:'https://vimeo.com/453279523',hostLinkLabel:'Open video',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
         {id:'watch2',prompt:'What happened to the dead body on the floor during the scene?',mediaUrl:'',answerMode:'text',accepted:['it changed','body changed','the body changed','different body','different man','different person','the man changed','the person changed','corpse changed','victim changed'],points:1},
         {id:'watch3',prompt:'What colour did the detective’s coat change to?',mediaUrl:'',answerMode:'text',accepted:['white','cream','light','light coloured','light colored'],points:1},
         {id:'watch4',prompt:'What kitchen object was replaced by a candelabra?',mediaUrl:'',answerMode:'text',accepted:['rolling pin','a rolling pin'],points:1},
