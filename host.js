@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js';
+} from './core.js?v=20260924-quiz1';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -197,6 +197,13 @@ async function setCurrentRound(rid){
   await batch.commit();
 }
 
+function hostAnswerText(q){
+  if(!q)return'';
+  if(q.answerMode==='split')return(q.partAnswers||[]).map(p=>`${p.label}: ${(p.accepted||[])[0]||'—'}`).join(' • ');
+  if(['number','closest'].includes(q.answerMode))return String(q.numericAnswer??'—');
+  return (q.accepted||[])[0]||'—';
+}
+
 function currentRoundSubmissions(){const r=currentRound();return r?state.submissions.filter(s=>s.roundId===r.id):[]}
 function currentRoundClaims(){const r=currentRound();return r?state.jokerClaims.filter(j=>j.roundId===r.id):[]}
 
@@ -217,7 +224,7 @@ function renderLivePanel(){
   const mediaPreview=currentMedia
     ? `<div class="card" style="margin-top:12px;padding:12px"><div class="muted tiny" style="margin-bottom:8px">HOST PREVIEW — ITEM ${currentIndex+1}</div><div style="max-height:360px;overflow:auto">${mediaEmbed(currentMedia)}</div></div>`
     : `<div class="card" style="margin-top:12px;padding:12px"><div class="muted tiny">HOST PREVIEW — ITEM ${currentIndex+1}</div><p class="muted" style="margin-bottom:0">No media on this item. The projector will show the question number only.</p></div>`;
-  box.innerHTML=`<div class="muted tiny">CURRENT ROUND</div><h2>${r.icon||'🎲'} ${escapeHtml(r.title)}</h2><p>${escapeHtml(r.instructions||'')}</p><div class="actions"><span class="pill">Status: <strong class="status-${r.status}">${r.status}</strong></span><span class="pill">${subs.length}/${state.teams.length} submitted</span><span class="pill">${currentRoundClaims().length} joker${currentRoundClaims().length===1?'':'s'}</span></div><div class="divider"></div><div class="actions"><button class="btn primary" id="readyBtn">Ready</button><button class="btn good" id="openBtn">Open answers</button><button class="btn danger" id="lockBtn">Lock round</button><button class="btn ghost" id="revealBtn">Reveal answers</button></div><div class="divider"></div><h3>Projector media</h3><p class="muted tiny">Use these only when a question has an image, sound or video. Written question text is never shown on the projector.</p><div class="actions"><button class="btn ghost" id="prevQBtn">← Previous media</button><span class="pill">Item ${Math.min((r.currentQuestion||0)+1,r.questionCount||1)} / ${r.questionCount||0}</span><button class="btn ghost" id="nextQBtn">Next media →</button></div>${mediaPreview}<div class="divider"></div><h3>Timer</h3><div class="actions"><button class="btn ghost" data-timer="30">30 sec</button><button class="btn ghost" data-timer="60">60 sec</button><button class="btn ghost" data-timer="90">90 sec</button><button class="btn ghost" data-timer="0">Stop</button>${timer!==null?`<span class="pill">Timer running</span>`:''}</div><div class="divider"></div><h3>Still waiting</h3><p class="muted">${waiting.length?waiting.map(t=>escapeHtml(t.name)).join(', '):'Everyone has submitted.'}</p>`;
+  box.innerHTML=`<div class="muted tiny">CURRENT ROUND</div><h2>${r.icon||'🎲'} ${escapeHtml(r.title)}</h2><p>${escapeHtml(r.instructions||'')}</p><div class="actions"><span class="pill">Status: <strong class="status-${r.status}">${r.status}</strong></span><span class="pill">${subs.length}/${state.teams.length} submitted</span><span class="pill">${currentRoundClaims().length} joker${currentRoundClaims().length===1?'':'s'}</span></div><div class="divider"></div><div class="actions"><button class="btn primary" id="readyBtn">Ready</button><button class="btn good" id="openBtn">Open answers</button><button class="btn danger" id="lockBtn">Lock round</button><button class="btn ghost" id="revealBtn">Reveal answers</button></div><div class="divider"></div><div class="card" style="padding:14px;background:#091525"><div class="muted tiny">READ ALOUD — QUESTION ${currentIndex+1}</div><div style="font-size:1.12rem;font-weight:850;line-height:1.35;margin-top:7px">${escapeHtml(currentHostQuestion?.prompt||`Question ${currentIndex+1}`)}</div>${r.status==='revealed'?`<div style="margin-top:10px"><span class="pill">Answer: ${escapeHtml(hostAnswerText(currentHostQuestion))}</span></div>`:''}</div><div class="divider"></div><h3>Current item</h3><p class="muted tiny">Question text above is host-only. The projector shows only media or the question number.</p><div class="actions"><button class="btn ghost" id="prevQBtn">← Previous item</button><span class="pill">Item ${Math.min((r.currentQuestion||0)+1,r.questionCount||1)} / ${r.questionCount||0}</span><button class="btn ghost" id="nextQBtn">Next item →</button></div>${mediaPreview}<div class="divider"></div><h3>Timer</h3><div class="actions"><button class="btn ghost" data-timer="30">30 sec</button><button class="btn ghost" data-timer="60">60 sec</button><button class="btn ghost" data-timer="90">90 sec</button><button class="btn ghost" data-timer="0">Stop</button>${timer!==null?`<span class="pill">Timer running</span>`:''}</div><div class="divider"></div><h3>Still waiting</h3><p class="muted">${waiting.length?waiting.map(t=>escapeHtml(t.name)).join(', '):'Everyone has submitted.'}</p>`;
   $('#readyBtn').onclick=()=>setRoundStatus('ready');
   $('#openBtn').onclick=()=>setRoundStatus('open');
   $('#lockBtn').onclick=()=>setRoundStatus('locked');
