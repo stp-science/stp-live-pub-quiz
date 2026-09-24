@@ -18,12 +18,70 @@ export function levenshtein(a = '', b = '') {
   const prev=Array.from({length:n+1},(_,i)=>i),cur=new Array(n+1);
   for(let i=1;i<=m;i++){cur[0]=i;for(let j=1;j<=n;j++){const cost=a[i-1]===b[j-1]?0:1;cur[j]=Math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+cost);}for(let j=0;j<=n;j++)prev[j]=cur[j];} return prev[n];
 }
-export function similarity(a,b){const x=normalizeAnswer(a),y=normalizeAnswer(b);if(!x&&!y)return 1;const maxLen=Math.max(x.length,y.length);return maxLen?1-levenshtein(x,y)/maxLen:0;}
+
+// Damerau-Levenshtein also treats an adjacent letter swap as one typo,
+// e.g. "jupitre" → "jupiter".
+export function typoDistance(a = '', b = '') {
+  a = normalizeAnswer(a); b = normalizeAnswer(b);
+  const m=a.length,n=b.length;
+  if(!m)return n;if(!n)return m;
+  const d=Array.from({length:m+1},()=>Array(n+1).fill(0));
+  for(let i=0;i<=m;i++)d[i][0]=i;
+  for(let j=0;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      const cost=a[i-1]===b[j-1]?0:1;
+      d[i][j]=Math.min(
+        d[i-1][j]+1,
+        d[i][j-1]+1,
+        d[i-1][j-1]+cost
+      );
+      if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]){
+        d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1);
+      }
+    }
+  }
+  return d[m][n];
+}
+export function similarity(a,b){const x=normalizeAnswer(a),y=normalizeAnswer(b);if(!x&&!y)return 1;const maxLen=Math.max(x.length,y.length);return maxLen?1-typoDistance(x,y)/maxLen:0;}
 export function markOne(question,response){
   const max=Number(question.points??1),mode=question.answerMode||'text';
   if(mode==='number'){const got=Number(response),target=Number(question.numericAnswer),tol=Math.abs(Number(question.tolerance??0));if(!Number.isFinite(got))return{points:0,status:'wrong',note:'Not a number'};return Math.abs(got-target)<=tol?{points:max,status:'correct',note:`Within ±${tol}`}:{points:0,status:'wrong',note:`Expected ${target}${tol?` ±${tol}`:''}`};}
   if(mode==='split'){const parts=Array.isArray(response)?response:[],keys=question.partAnswers||[];let points=0;const details=[];keys.forEach((key,i)=>{const accepted=(key.accepted||[]).map(normalizeAnswer),ok=accepted.includes(normalizeAnswer(parts[i]||'')),p=Number(key.points??1);if(ok)points+=p;details.push(ok?'correct':'wrong');});return{points,status:points===max?'correct':points?'partial':'wrong',note:details.join(', ')};}
-  const accepted=(question.accepted||[]).map(normalizeAnswer).filter(Boolean),got=normalizeAnswer(response);if(accepted.includes(got))return{points:max,status:'correct',note:'Exact accepted answer'};let best=0;for(const key of accepted)best=Math.max(best,similarity(got,key));if(got&&best>=0.82)return{points:0,status:'review',note:`Possible spelling/near match (${Math.round(best*100)}%)`};return{points:0,status:'wrong',note:'No accepted match'};
+  const accepted=(question.accepted||[]).map(normalizeAnswer).filter(Boolean),got=normalizeAnswer(response);
+  if(accepted.includes(got))return{points:max,status:'correct',note:'Exact accepted answer'};
+
+  let bestScore=0,bestDistance=Infinity,bestKey='';
+  for(const key of accepted){
+    const dist=typoDistance(got,key),score=similarity(got,key);
+    if(score>bestScore || (score===bestScore && dist<bestDistance)){
+      bestScore=score;bestDistance=dist;bestKey=key;
+    }
+  }
+
+  // Auto-accept obvious typos, but be stricter with very short answers
+  // so "bat" does not become "cat" just because one letter differs.
+  const longest=Math.max(got.length,bestKey.length);
+  const autoTypo =
+    got &&
+    (
+      (longest>=4 && bestDistance===1) ||
+      (longest>=8 && bestDistance<=2 && bestScore>=0.78)
+    );
+
+  if(autoTypo)return{
+    points:max,
+    status:'correct',
+    note:`Accepted spelling variation → ${bestKey}`
+  };
+
+  if(got && (bestDistance<=2 || bestScore>=0.72))return{
+    points:0,
+    status:'review',
+    note:`Possible spelling/near match → ${bestKey} (${Math.round(bestScore*100)}%)`
+  };
+
+  return{points:0,status:'wrong',note:'No accepted match'};
 }
 export function formatScore(value){const n=Number(value||0);return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'');}
 export function roundMaxPoints(round){return(round.questions||[]).reduce((sum,q)=>sum+Number(q.points??1),0);}
