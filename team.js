@@ -11,6 +11,19 @@ function currentRound(){return state.rounds.find(r=>r.id===state.quiz?.currentRo
 function currentSub(){const r=currentRound();return r?state.subs.find(s=>s.roundId===r.id):null}
 function currentClaim(){const r=currentRound();return r?state.claims.find(c=>c.roundId===r.id):null}
 function draftKey(){const r=currentRound();return r&&state.quiz?`stpDraft:${state.quiz.id}:${r.id}`:''}
+function firestoreSafe(value){
+  if(Array.isArray(value)){
+    const obj={};
+    value.forEach((v,i)=>{obj['i'+i]=firestoreSafe(v)});
+    return obj;
+  }
+  if(value&&typeof value==='object'){
+    const obj={};
+    for(const [k,v] of Object.entries(value))obj[k]=firestoreSafe(v);
+    return obj;
+  }
+  return value;
+}
 function answersFromStore(value){
   if(Array.isArray(value))return value;
   if(value&&typeof value==='object'){
@@ -54,6 +67,7 @@ onAuthStateChanged(auth,async user=>{
   $('#joinPanel').classList.remove('hidden');
 });
 
+console.log('STP team build MUSICFIX3 loaded');
 $('#joinBtn').onclick=async()=>{
   const code=slugifyCode($('#codeInput').value), name=$('#teamNameInput').value.trim();$('#joinError').textContent='';
   if(code.length<4)return $('#joinError').textContent='Enter the quiz code.';
@@ -174,9 +188,19 @@ async function submitAnswers(){
   const btn=$('#submitBtn');
   if(btn){btn.disabled=true;btn.textContent='Submitting…';}
   try{
+    const payload=firestoreSafe({
+      teamUid:state.user.uid,
+      roundId:r.id,
+      answers:answersToStore(answers),
+      marked:false
+    });
+    payload.submittedAt=serverTimestamp();
+
+    console.log('Submitting quiz payload',payload);
+
     await setDoc(
       doc(db,'quizzes',state.quiz.id,'submissions',id),
-      {teamUid:state.user.uid,roundId:r.id,answers:answersToStore(answers),marked:false,submittedAt:serverTimestamp()},
+      payload,
       {merge:true}
     );
     localStorage.removeItem(draftKey());
