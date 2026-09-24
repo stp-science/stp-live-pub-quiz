@@ -132,7 +132,7 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:9,
+  contentVersion:10,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -196,7 +196,7 @@ export const sampleQuiz={
         {id:'watch2',prompt:'What liquid does Paddington drink just before putting his head into the toilet?',mediaUrl:'',answerMode:'text',accepted:['mouthwash','mouth wash'],points:1},
         {id:'watch3',prompt:'What does Paddington use as a shield when the shower head turns on him?',mediaUrl:'',answerMode:'text',accepted:['toilet lid','toilet seat lid','toilet seat','lid','the toilet lid'],points:1},
         {id:'watch4',prompt:'What happens to the shower head after Paddington turns the shower on?',mediaUrl:'',answerMode:'text',accepted:['comes loose','it comes loose','comes off','it comes off','flies around','it flies around','sprays around','it sprays around','comes loose and sprays around','flies around spraying water'],points:1},
-        {id:'watch5',prompt:'Where does Paddington’s runaway bathtub finally end up?',mediaUrl:'',answerMode:'text',accepted:['kitchen','the kitchen'],points:1}
+        {id:'watch5',prompt:'Where does Paddington’s runaway bathtub finally end up?',mediaUrl:'',answerMode:'text',accepted:['living room','the living room','lounge','the lounge','sitting room','the sitting room'],points:1}
       ]
     },
     {
