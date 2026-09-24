@@ -635,9 +635,75 @@ $('#toggleLeaderboardBtn').onclick=async()=>{
 };
 
 function renderTeamManager(){
-  $('#teamManager').innerHTML=state.teams.length?state.teams.map(t=>`<div class="list-row"><div><strong>${escapeHtml(t.name)}</strong><div class="muted tiny">${t.jokerUsedRoundId?'Joker used':'Joker available'} • adjustment ${formatScore(t.manualAdjustment||0)}</div></div><div class="actions"><button class="btn ghost" data-adjust="${t.uid}">Adjust</button><button class="btn danger" data-remove-team="${t.uid}">Remove</button></div></div>`).join(''):'<p class="muted">No teams have joined.</p>';
-  $$('[data-adjust]').forEach(b=>b.onclick=async()=>{const t=state.teams.find(x=>x.uid===b.dataset.adjust);const val=prompt(`Manual score adjustment for ${t.name}`,String(t.manualAdjustment||0));if(val===null)return;const n=Number(val);if(!Number.isFinite(n))return toast('Enter a number');const marked=state.submissions.filter(s=>s.teamUid===t.uid&&s.marked).reduce((s,x)=>s+Number(x.score||0),0);await updateDoc(doc(db,'quizzes',quizId(),'teams',t.uid),{manualAdjustment:n,totalScore:marked+n});await setDoc(doc(db,'quizzes',quizId(),'leaderboard',t.uid),{name:t.name,score:marked+n},{merge:true})});
-  $$('[data-remove-team]').forEach(b=>b.onclick=async()=>{const t=state.teams.find(x=>x.uid===b.dataset.removeTeam);if(confirm(`Remove ${t.name}?`)){await deleteDoc(doc(db,'quizzes',quizId(),'teams',t.uid));await deleteDoc(doc(db,'quizzes',quizId(),'leaderboard',t.uid)).catch(()=>{})}});
+  $('#teamManager').innerHTML=state.teams.length?state.teams.map(t=>{
+    const adj=Number(t.manualAdjustment||0);
+    const adjText=adj>0?'+'+formatScore(adj):formatScore(adj);
+    return `<div class="list-row"><div><strong>${escapeHtml(t.name)}</strong><div class="muted tiny">Score ${formatScore(t.totalScore||0)} • Manual adjustment ${adjText} • ${t.jokerUsedRoundId?'Joker used':'Joker available'}</div></div><div class="actions"><button class="btn ghost" data-adjust="${t.uid}">± Score</button><button class="btn ghost" data-reset-adjust="${t.uid}" ${adj===0?'disabled':''}>Reset</button><button class="btn danger" data-remove-team="${t.uid}">Remove</button></div></div>`;
+  }).join(''):'<p class="muted">No teams have joined.</p>';
+
+  $$('[data-adjust]').forEach(b=>b.onclick=async()=>{
+    const t=state.teams.find(x=>x.uid===b.dataset.adjust);
+    if(!t)return;
+    const val=prompt(`Change ${t.name}'s score by how many points?\nExamples: 1 = add 1, -1 = subtract 1, 0.5 = add half a point`,'0');
+    if(val===null)return;
+    const delta=Number(val);
+    if(!Number.isFinite(delta)||delta===0)return delta===0?toast('No score change'):toast('Enter a valid number');
+
+    const oldAdj=Number(t.manualAdjustment||0);
+    const oldTotal=Number(t.totalScore||0);
+    const newAdj=oldAdj+delta;
+    const newTotal=oldTotal+delta;
+
+    try{
+      const batch=writeBatch(db);
+      batch.update(doc(db,'quizzes',quizId(),'teams',t.uid),{
+        manualAdjustment:newAdj,
+        totalScore:newTotal
+      });
+      batch.set(doc(db,'quizzes',quizId(),'leaderboard',t.uid),{
+        name:t.name,
+        score:newTotal
+      },{merge:true});
+      await batch.commit();
+      toast(`${t.name}: ${delta>0?'+':''}${formatScore(delta)} point${Math.abs(delta)===1?'':'s'}`);
+    }catch(e){
+      console.error('Score adjustment failed',e);
+      toast('Could not adjust score: '+(e?.message||e));
+    }
+  });
+
+  $$('[data-reset-adjust]').forEach(b=>b.onclick=async()=>{
+    const t=state.teams.find(x=>x.uid===b.dataset.resetAdjust);
+    if(!t)return;
+    const adj=Number(t.manualAdjustment||0);
+    if(!adj)return;
+    if(!confirm(`Remove ${formatScore(adj)} manual adjustment from ${t.name}?`))return;
+    const newTotal=Number(t.totalScore||0)-adj;
+    try{
+      const batch=writeBatch(db);
+      batch.update(doc(db,'quizzes',quizId(),'teams',t.uid),{
+        manualAdjustment:0,
+        totalScore:newTotal
+      });
+      batch.set(doc(db,'quizzes',quizId(),'leaderboard',t.uid),{
+        name:t.name,
+        score:newTotal
+      },{merge:true});
+      await batch.commit();
+      toast(`${t.name}: manual adjustment reset`);
+    }catch(e){
+      console.error('Reset adjustment failed',e);
+      toast('Could not reset adjustment: '+(e?.message||e));
+    }
+  });
+
+  $$('[data-remove-team]').forEach(b=>b.onclick=async()=>{
+    const t=state.teams.find(x=>x.uid===b.dataset.removeTeam);
+    if(confirm(`Remove ${t.name}?`)){
+      await deleteDoc(doc(db,'quizzes',quizId(),'teams',t.uid));
+      await deleteDoc(doc(db,'quizzes',quizId(),'leaderboard',t.uid)).catch(()=>{});
+    }
+  });
 }
 
 // Keyboard shortcuts for fast live hosting.
