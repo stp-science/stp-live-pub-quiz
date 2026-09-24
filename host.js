@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-paddington-q4fix';
+} from './core.js?v=20260924-ai3';
 import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai1';
 
 const state = {
@@ -96,7 +96,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=9)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=10)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -143,10 +143,10 @@ async function ensureBuiltInQuizContent(id){
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:9,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:10,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=9;
+    state.quiz.contentVersion=10;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
