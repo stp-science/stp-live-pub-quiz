@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-paddington-hard1';
+} from './core.js?v=20260924-paddington-q4fix';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -95,7 +95,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=8)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=9)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -128,7 +128,7 @@ async function ensureBuiltInQuizContent(id){
         {id:'watch1',prompt:'After using the toothbrushes in his ears, what does Paddington do with what comes out?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['licks it','lick it','tastes it','taste it','eats it','puts it in his mouth','puts them in his mouth'],points:1},
         {id:'watch2',prompt:'What liquid does Paddington drink just before putting his head into the toilet?',mediaUrl:'',answerMode:'text',accepted:['mouthwash','mouth wash'],points:1},
         {id:'watch3',prompt:'What does Paddington use as a shield when the shower head turns on him?',mediaUrl:'',answerMode:'text',accepted:['toilet lid','toilet seat lid','toilet seat','lid','the toilet lid'],points:1},
-        {id:'watch4',prompt:'While the bathroom chaos is happening, what is Mr Brown trying to add to the home insurance?',mediaUrl:'',answerMode:'text',accepted:['bear cover','bear coverage','coverage for bears','cover for bears','insurance for bears','bear insurance','protection against bears'],points:1},
+        {id:'watch4',prompt:'What happens to the shower head after Paddington turns the shower on?',mediaUrl:'',answerMode:'text',accepted:['comes loose','it comes loose','comes off','it comes off','flies around','it flies around','sprays around','it sprays around','comes loose and sprays around','flies around spraying water'],points:1},
         {id:'watch5',prompt:'Where does Paddington’s runaway bathtub finally end up?',mediaUrl:'',answerMode:'text',accepted:['kitchen','the kitchen'],points:1}
       ];
         batch.update(hrRef,{questions:newQuestions});
@@ -142,10 +142,10 @@ async function ensureBuiltInQuizContent(id){
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:8,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:9,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=8;
+    state.quiz.contentVersion=9;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
