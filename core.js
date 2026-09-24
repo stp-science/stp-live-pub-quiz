@@ -132,7 +132,7 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:5,
+  contentVersion:6,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -189,10 +189,10 @@ export const sampleQuiz={
     },
     {
       title:'Watch Closely',icon:'👀',type:'video',
-      instructions:'Play the Paddington clip ONCE. Students should watch carefully because the five questions come afterwards. Do not replay until all answers are submitted.',
+      instructions:'Play the Bathroom Troubles clip once. For the observation section, use the roughly one-minute sequence beginning with Mr Brown brushing his teeth and ending after “All I was trying to do was wash my face.” Then ask the five questions. Do not replay until answers are submitted.',
       jokerAllowed:true,
       questions:[
-        {id:'watch1',prompt:'What did Paddington call Mr Brown’s toothbrushes?',mediaUrl:'https://www.youtube.com/watch?v=xTye8Mj5hpU&start=0&end=60',hostLink:'https://www.youtube.com/watch?v=xTye8Mj5hpU',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['ear brushes','ear brush','earbrushes','earbrush'],points:1},
+        {id:'watch1',prompt:'What did Paddington call Mr Brown’s toothbrushes?',mediaUrl:'https://www.youtube.com/watch?v=3EnoCe7DinU',hostLink:'https://www.youtube.com/watch?v=3EnoCe7DinU',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['ear brushes','ear brush','earbrushes','earbrush'],points:1},
         {id:'watch2',prompt:'What was Jonathan about to slide down?',mediaUrl:'',answerMode:'text',accepted:['banister','the banister','banisters','a banister','stair banister','stair rail','railing'],points:1},
         {id:'watch3',prompt:'What percentage of pre-breakfast accidents did Mr Brown say involve banisters?',mediaUrl:'',answerMode:'number',numericAnswer:34,tolerance:0,points:1,placeholder:'%'},
         {id:'watch4',prompt:'Which household appliance switched on after the crash?',mediaUrl:'',answerMode:'text',accepted:['vacuum cleaner','vacuum','hoover','a vacuum cleaner','the vacuum cleaner'],points:1},
