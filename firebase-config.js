@@ -8,3 +8,6 @@ export const firebaseConfig = {
   messagingSenderId: "950106068041",
   appId: "1:950106068041:web:137d52e42c1ce677711b98"
 };
+
+// Public reCAPTCHA Enterprise site key used by Firebase App Check.
+export const recaptchaEnterpriseKey = "6Le2PMwtAAAAAO8XlyVMDHBHqdMbgamH8govj6Wh";
