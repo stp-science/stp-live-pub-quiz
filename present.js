@@ -32,13 +32,23 @@ function renderQuestion(r,q){
   const main=media
     ? `<div id="projectorMedia">${mediaEmbed(media)}</div>${q.fallbackMediaUrl?`<div style="text-align:center;margin-top:10px"><button id="useFallbackMedia" class="btn ghost">Video unavailable? Use backup</button></div>`:''}`
     : `<div style="margin:auto;text-align:center"><div class="muted" style="font-size:clamp(1.2rem,2vw,1.8rem)">Listen to the host</div><div class="quiz-code" style="font-size:clamp(4rem,14vw,9rem);margin-top:16px">Q${idx+1}</div></div>`;
-  $('#presentContent').innerHTML=`<div class="present-head"><div class="present-round">${r.icon||'🎲'} ${escapeHtml(r.title)}</div><div class="actions"><div class="present-qnum">Question ${idx+1} / ${r.questionCount}</div><button id="fullscreenPresent" class="btn ghost">⛶ Fullscreen</button></div></div>${main}${reveal?`<div><div class="muted" style="text-align:center">ANSWER</div><div class="present-answer">${escapeHtml(answerText(q))}</div></div>`:''}${state.quiz.timerEndsAt?'<div style="text-align:right"><div id="presentTimer" class="timer">--:--</div></div>':''}`;
+  $('#presentContent').innerHTML=`<div class="present-head"><div class="present-round">${r.icon||'🎲'} ${escapeHtml(r.title)}</div><div class="actions"><div class="present-qnum">Question ${idx+1} / ${r.questionCount}</div><button id="fullscreenPresent" class="btn ghost">${media?'⛶ Fullscreen video':'⛶ Fullscreen presentation'}</button></div></div>${main}${reveal?`<div><div class="muted" style="text-align:center">ANSWER</div><div class="present-answer">${escapeHtml(answerText(q))}</div></div>`:''}${state.quiz.timerEndsAt?'<div style="text-align:right"><div id="presentTimer" class="timer">--:--</div></div>':''}`;
 
   $('#fullscreenPresent')?.addEventListener('click',async()=>{
     try{
-      if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      else await document.exitFullscreen();
-    }catch(e){}
+      if(document.fullscreenElement){
+        await document.exitFullscreen();
+        return;
+      }
+      const mediaBox=$('#projectorMedia');
+      if(mediaBox){
+        await mediaBox.requestFullscreen();
+      }else{
+        await document.documentElement.requestFullscreen();
+      }
+    }catch(e){
+      console.error('Fullscreen failed',e);
+    }
   });
 
   $('#useFallbackMedia')?.addEventListener('click',()=>{
