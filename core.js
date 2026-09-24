@@ -113,12 +113,14 @@ export function mediaEmbed(url=''){
   if(yt)return`<div class="media-frame"><iframe src="https://www.youtube.com/embed/${yt[1]}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;
   const vm=url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if(vm)return`<div class="media-frame"><iframe src="https://player.vimeo.com/video/${vm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  const dm=url.match(/dailymotion\.com\/video\/([A-Za-z0-9]+)/);
+  if(dm)return`<div class="media-frame"><iframe src="https://www.dailymotion.com/embed/video/${dm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   if(/\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url))return`<audio controls preload="metadata" src="${safe}"></audio>`;
   if(/\.(mp4|webm|mov)(\?|$)/i.test(url))return`<video controls preload="metadata" src="${safe}"></video>`;
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:2,
+  contentVersion:3,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -178,7 +180,7 @@ export const sampleQuiz={
       instructions:'Play the Whodunnit? video ONCE and PAUSE at 0:56, before the video reveals the changes. Then read the five questions. Do not replay until answers are submitted.',
       jokerAllowed:true,
       questions:[
-        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://vimeo.com/453279523',hostLink:'https://vimeo.com/453279523',hostLinkLabel:'Open video',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
+        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://www.dailymotion.com/video/x7ad5p',hostLink:'https://www.dailymotion.com/video/x7ad5p',hostLinkLabel:'Open video',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
         {id:'watch2',prompt:'What happened to the dead body on the floor during the scene?',mediaUrl:'',answerMode:'text',accepted:['it changed','body changed','the body changed','different body','different man','different person','the man changed','the person changed','corpse changed','victim changed'],points:1},
         {id:'watch3',prompt:'What colour did the detective’s coat change to?',mediaUrl:'',answerMode:'text',accepted:['white','cream','light','light coloured','light colored'],points:1},
         {id:'watch4',prompt:'What kitchen object was replaced by a candelabra?',mediaUrl:'',answerMode:'text',accepted:['rolling pin','a rolling pin'],points:1},
