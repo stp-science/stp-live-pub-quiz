@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-paddington3';
+} from './core.js?v=20260924-paddington-hard1';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -95,7 +95,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=7)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=8)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -125,12 +125,12 @@ async function ensureBuiltInQuizContent(id){
 
       if(title==='Watch Closely'){
         const newQuestions=[
-          {id:'watch1',prompt:'What did Paddington use to clean his ears?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['toothbrush','toothbrushes','a toothbrush','two toothbrushes'],points:1},
-          {id:'watch2',prompt:'How many toothbrushes did Paddington use?',mediaUrl:'',answerMode:'number',numericAnswer:2,tolerance:0,points:1},
-          {id:'watch3',prompt:'Which bathroom fixture did Paddington accidentally block?',mediaUrl:'',answerMode:'text',accepted:['toilet','the toilet','loo'],points:1},
-          {id:'watch4',prompt:'What did Paddington ride down the stairs in?',mediaUrl:'',answerMode:'text',accepted:['bath','bathtub','bath tub','the bath','the bathtub'],points:1},
-          {id:'watch5',prompt:'What yellow object was with Paddington after the crash?',mediaUrl:'',answerMode:'text',accepted:['rubber duck','duck','a rubber duck','yellow duck','rubber ducky'],points:1}
-        ];
+        {id:'watch1',prompt:'After using the toothbrushes in his ears, what does Paddington do with what comes out?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['licks it','lick it','tastes it','taste it','eats it','puts it in his mouth','puts them in his mouth'],points:1},
+        {id:'watch2',prompt:'What liquid does Paddington drink just before putting his head into the toilet?',mediaUrl:'',answerMode:'text',accepted:['mouthwash','mouth wash'],points:1},
+        {id:'watch3',prompt:'What does Paddington use as a shield when the shower head turns on him?',mediaUrl:'',answerMode:'text',accepted:['toilet lid','toilet seat lid','toilet seat','lid','the toilet lid'],points:1},
+        {id:'watch4',prompt:'While the bathroom chaos is happening, what is Mr Brown trying to add to the home insurance?',mediaUrl:'',answerMode:'text',accepted:['bear cover','bear coverage','coverage for bears','cover for bears','insurance for bears','bear insurance','protection against bears'],points:1},
+        {id:'watch5',prompt:'Where does Paddington’s runaway bathtub finally end up?',mediaUrl:'',answerMode:'text',accepted:['kitchen','the kitchen'],points:1}
+      ];
         batch.update(hrRef,{questions:newQuestions});
         batch.update(rd.ref,{
           instructions:'Play the Paddington bathroom clip once. Students watch only — do not show the questions until the clip finishes. Do not replay until all answers are submitted.',
@@ -142,10 +142,10 @@ async function ensureBuiltInQuizContent(id){
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:7,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:8,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=7;
+    state.quiz.contentVersion=8;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
