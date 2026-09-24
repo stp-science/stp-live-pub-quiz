@@ -10,11 +10,12 @@ import {
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
-  unsubs:[], editRoundId:null, editing:null, marks:new Map()
+  detailUnsubs:[], quizListUnsub:null, selectingQuizId:null, editRoundId:null, editing:null, marks:new Map()
 };
 
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),2500)}
-function cleanup(){state.unsubs.forEach(fn=>fn?.());state.unsubs=[]}
+function cleanupDetails(){state.detailUnsubs.forEach(fn=>fn?.());state.detailUnsubs=[]}
+function cleanupAll(){cleanupDetails();state.quizListUnsub?.();state.quizListUnsub=null}
 function isHostUser(user){return user && !user.isAnonymous}
 function quizId(){return state.quiz?.id}
 function currentRound(){return state.rounds.find(r=>r.id===state.quiz?.currentRoundId)||null}
@@ -29,20 +30,27 @@ onAuthStateChanged(auth, user=>{
   $('#authGate').classList.toggle('hidden',ok);
   $('#hostApp').classList.toggle('hidden',!ok);
   $('#signOutBtn').classList.toggle('hidden',!ok);
-  cleanup();
+  cleanupAll();
+  state.quiz=null; state.rounds=[]; state.teams=[]; state.submissions=[]; state.jokerClaims=[];
   if(ok) subscribeQuizzes();
 });
 
 function subscribeQuizzes(){
   const q=query(collection(db,'quizzes'),where('hostUid','==',state.user.uid));
-  state.unsubs.push(onSnapshot(q,snap=>{
+  state.quizListUnsub?.();
+  state.quizListUnsub=onSnapshot(q,snap=>{
     state.quizzes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
     renderQuizSelect();
+
+    // Keep the current quiz selected while it still exists. Only auto-select
+    // when nothing is selected yet, or if the current quiz was actually deleted.
+    if(state.quiz && state.quizzes.some(x=>x.id===state.quiz.id)) return;
+
     const wanted=localStorage.getItem('stpHostQuiz');
     const next=state.quizzes.find(x=>x.id===wanted)||state.quizzes[0];
-    if(next && next.id!==quizId()) selectQuiz(next.id);
-    if(!next){state.quiz=null;renderAll()}
-  }));
+    if(next && next.id!==state.selectingQuizId) selectQuiz(next.id);
+    else if(!next && !state.selectingQuizId){state.quiz=null;renderAll()}
+  },err=>{console.error('Quiz list listener failed',err);toast('Quiz list error: '+err.message)});
 }
 
 function renderQuizSelect(){
@@ -52,28 +60,50 @@ function renderQuizSelect(){
 $('#quizSelect').onchange=e=>selectQuiz(e.target.value);
 
 async function selectQuiz(id){
-  cleanup();state.editRoundId=null;state.editing=null;state.hostRounds.clear();state.marks.clear();
-  // Re-add the host quiz list subscription after clearing detail listeners.
-  subscribeQuizzesOnly();
-  localStorage.setItem('stpHostQuiz',id);
-  state.quiz={id,...(await getDoc(doc(db,'quizzes',id))).data()};
-  subscribeQuizDetail(id);
-}
+  if(!id || state.selectingQuizId===id) return;
+  if(state.quiz?.id===id && state.detailUnsubs.length) return;
 
-function subscribeQuizzesOnly(){
-  const q=query(collection(db,'quizzes'),where('hostUid','==',state.user.uid));
-  state.unsubs.push(onSnapshot(q,snap=>{
-    state.quizzes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-    renderQuizSelect();
-  }));
+  state.selectingQuizId=id;
+  cleanupDetails();
+  state.editRoundId=null;state.editing=null;state.hostRounds.clear();state.marks.clear();
+
+  try{
+    const snap=await getDoc(doc(db,'quizzes',id));
+    if(!snap.exists()) throw new Error('Quiz no longer exists.');
+    state.quiz={id:snap.id,...snap.data()};
+    state.rounds=[];state.teams=[];state.submissions=[];state.jokerClaims=[];
+    localStorage.setItem('stpHostQuiz',id);
+    renderAll();
+    subscribeQuizDetail(id);
+  }catch(e){
+    console.error('Select quiz failed',e);
+    toast('Could not open quiz: '+e.message);
+  }finally{
+    state.selectingQuizId=null;
+  }
 }
 
 function subscribeQuizDetail(id){
-  state.unsubs.push(onSnapshot(doc(db,'quizzes',id),snap=>{if(!snap.exists())return;state.quiz={id:snap.id,...snap.data()};renderAll()}));
-  state.unsubs.push(onSnapshot(collection(db,'quizzes',id,'rounds'),snap=>{state.rounds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);renderAll()}));
-  state.unsubs.push(onSnapshot(collection(db,'quizzes',id,'teams'),snap=>{state.teams=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.totalScore||0)-(a.totalScore||0));renderAll()}));
-  state.unsubs.push(onSnapshot(collection(db,'quizzes',id,'submissions'),snap=>{state.submissions=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
-  state.unsubs.push(onSnapshot(collection(db,'quizzes',id,'jokerClaims'),snap=>{state.jokerClaims=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll()}));
+  state.detailUnsubs.push(onSnapshot(doc(db,'quizzes',id),snap=>{
+    if(!snap.exists())return;
+    state.quiz={id:snap.id,...snap.data()};renderAll();
+  },err=>{console.error('Quiz listener failed',err);toast('Quiz listener error: '+err.message)}));
+
+  state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'rounds'),snap=>{
+    state.rounds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);renderAll();
+  },err=>{console.error('Rounds listener failed',err);toast('Rounds error: '+err.message)}));
+
+  state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'teams'),snap=>{
+    state.teams=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.totalScore||0)-(a.totalScore||0));renderAll();
+  },err=>{console.error('Teams listener failed',err);toast('Teams error: '+err.message)}));
+
+  state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'submissions'),snap=>{
+    state.submissions=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();
+  },err=>{console.error('Submissions listener failed',err);toast('Submissions error: '+err.message)}));
+
+  state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'jokerClaims'),snap=>{
+    state.jokerClaims=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();
+  },err=>{console.error('Joker listener failed',err);toast('Joker error: '+err.message)}));
 }
 
 async function createQuiz(template){
