@@ -339,7 +339,7 @@ function renderLeaderboard(){
   $('#toggleLeaderboardBtn').textContent=live?'Hide leaderboard':'Reveal leaderboard';
   const badge=$('#leaderboardVisibility');
   if(badge){
-    badge.textContent=live?'🟢 LIVE on teams & projector':'⚫ Hidden from teams & projector';
+    badge.textContent=live?'🟢 LIVE on projector':'⚫ Hidden from projector';
     badge.classList.toggle('status-open',live);
   }
 }
@@ -362,10 +362,10 @@ $('#toggleLeaderboardBtn').onclick=async()=>{
       });
       batch.update(doc(db,'quizzes',quizId()),{revealLeaderboard:true,updatedAt:serverTimestamp()});
       await batch.commit();
-      toast('Leaderboard is now LIVE on team and projector screens');
+      toast('Leaderboard is now LIVE on the projector');
     }else{
       await updateDoc(doc(db,'quizzes',quizId()),{revealLeaderboard:false,updatedAt:serverTimestamp()});
-      toast('Leaderboard hidden from teams and projector');
+      toast('Leaderboard hidden from the projector');
     }
   }catch(e){
     console.error('Leaderboard toggle failed',e);
