@@ -7,7 +7,7 @@ import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
 } from './core.js?v=20260924-ai3';
-import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai-debug3';
+import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai-fallback1';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
