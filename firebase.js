@@ -8,13 +8,25 @@ import {
   collection, query, where, orderBy, onSnapshot, getDocs,
   serverTimestamp, writeBatch, increment
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { firebaseConfig } from './firebase-config.js';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app-check.js';
+import { firebaseConfig, recaptchaEnterpriseKey } from './firebase-config.js';
 
 if (!firebaseConfig.projectId || firebaseConfig.projectId === 'REPLACE_ME') {
   console.warn('Firebase is not configured yet. See README.md.');
 }
 
 export const app = initializeApp(firebaseConfig);
+
+export let appCheck = null;
+try {
+  appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(recaptchaEnterpriseKey),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch (e) {
+  console.warn('Firebase App Check could not initialise.', e);
+}
+
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
