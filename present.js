@@ -1,5 +1,5 @@
 import { auth,db,googleProvider,signInWithPopup,onAuthStateChanged,doc,collection,onSnapshot } from './firebase.js';
-import { $, escapeHtml, mediaEmbed, formatScore, msToClock } from './core.js?v=20260924-paddington2';
+import { $, escapeHtml, mediaEmbed, formatScore, msToClock } from './core.js?v=20260924-paddington3';
 const state={user:null,quiz:null,rounds:[],hostRound:null,teams:[],unsubs:[],hostUnsub:null,timer:null};
 const qid=new URLSearchParams(location.search).get('quiz');
 $('#presentSignIn')?.addEventListener('click',()=>signInWithPopup(auth,googleProvider));
