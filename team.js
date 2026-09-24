@@ -62,8 +62,25 @@ function renderRound(){
     body+=`<div class="pill status-open">Answers are OPEN</div>${answerSheetHtml(r,sub)}${sub?'<div class="submit-banner" style="margin-top:12px">✓ Submitted. You can still update answers until the host locks the round.</div>':''}`;
   } else {
     body+=`<div class="locked-banner">🔒 Answers are locked.</div>`;
-    if(sub){body+=`<div style="margin-top:14px"><strong>Your submitted answers</strong>${submittedAnswersHtml(r,sub)}</div>`}else body+=`<p class="muted" style="margin-top:14px">No answer sheet was submitted for this round.</p>`;
-    if(sub?.marked)body+=`<div class="card" style="margin-top:14px"><div class="muted tiny">ROUND SCORE</div><div class="quiz-code">${formatScore(sub.score||0)}</div>${sub.jokerMultiplier===2?'<div class="pill">🃏 Joker doubled this score</div>':''}</div>`;
+    if(sub){
+      body+=`<div style="margin-top:14px"><strong>Your submitted answers</strong>`;
+      if(r.status==='revealed' && sub.marked && Array.isArray(sub.markResults)){
+        body+=revealedAnswersHtml(r,sub);
+      }else{
+        body+=submittedAnswersHtml(r,sub);
+      }
+      body+=`</div>`;
+    }else{
+      body+=`<p class="muted" style="margin-top:14px">No answer sheet was submitted for this round.</p>`;
+    }
+
+    if(sub?.marked){
+      body+=`<div class="card" style="margin-top:14px"><div class="muted tiny">ROUND SCORE</div><div class="quiz-code">${formatScore(sub.score||0)}</div>${sub.jokerMultiplier===2?'<div class="pill">🃏 Joker doubled this score</div>':''}</div>`;
+    }
+
+    if(r.status==='revealed' && !sub?.marked){
+      body+=`<p class="muted" style="margin-top:14px">The host has revealed the answers, but this round has not been marked yet.</p>`;
+    }
   }
   if(state.quiz.timerEndsAt&&['ready','open'].includes(r.status)) body+=`<div class="divider"></div><div class="muted tiny">TIMER</div><div id="teamTimer" class="timer">--:--</div>`;
   box.innerHTML=body;
@@ -114,6 +131,21 @@ async function playJoker(){
   const id=`${state.user.uid}_${r.id}`;await setDoc(doc(db,'quizzes',state.quiz.id,'jokerClaims',id),{teamUid:state.user.uid,roundId:r.id,createdAt:serverTimestamp()});toast('Joker played!');
 }
 function submittedAnswersHtml(r,sub){return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>`<div class="answer-row"><span class="muted">Answer ${i+1}:</span> <strong>${escapeHtml(Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'—'))}</strong></div>`).join('')}</div>`}
+
+function revealedAnswersHtml(r,sub){
+  return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>{
+    const result=sub.markResults?.[i]||{points:0,status:'wrong',note:''};
+    const answer=Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'—');
+    const pts=Number(result.points||0);
+    const status=result.status||'wrong';
+    const icon=status==='correct'?'✓':status==='partial'?'◐':'✗';
+    const cls=status==='correct'?'correct':status==='partial'?'review':'wrong';
+    let note='';
+    if(status==='correct' && /accepted spelling/i.test(result.note||'')) note=' • spelling accepted';
+    else if(status==='partial') note=' • partial credit';
+    return `<div class="answer-row ${cls}"><div class="actions" style="justify-content:space-between"><div><span class="muted">Answer ${i+1}:</span> <strong>${escapeHtml(answer)}</strong><span class="muted">${note}</span></div><div class="pill">${icon} ${formatScore(pts)} pt${pts===1?'':'s'}</div></div></div>`;
+  }).join('')}</div>`;
+}
 
 function renderLeaderboardGate(){
   const box=$('#leaderboardArea');
