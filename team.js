@@ -36,13 +36,35 @@ $('#joinBtn').onclick=async()=>{
 };
 
 async function enterQuiz(id){
-  cleanup();$('#joinPanel').classList.add('hidden');$('#quizPanel').classList.remove('hidden');
+  cleanup();$('#joinPanel').classList.add('hidden');$('#quizPanel').classList.remove('hidden');$('#leaveQuizBtn').classList.remove('hidden');
   state.unsubs.push(onSnapshot(doc(db,'quizzes',id),snap=>{if(!snap.exists())return;state.quiz={id:snap.id,...snap.data()};render()}));
   state.unsubs.push(onSnapshot(collection(db,'quizzes',id,'rounds'),snap=>{state.rounds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);render()}));
   state.unsubs.push(onSnapshot(doc(db,'quizzes',id,'teams',state.user.uid),snap=>{if(!snap.exists()){localStorage.removeItem('stpTeamQuiz');location.reload();return}state.team={id:snap.id,...snap.data()};render()}));
   state.unsubs.push(onSnapshot(query(collection(db,'quizzes',id,'submissions'),where('teamUid','==',state.user.uid)),snap=>{state.subs=snap.docs.map(d=>({id:d.id,...d.data()}));render()}));
   state.unsubs.push(onSnapshot(query(collection(db,'quizzes',id,'jokerClaims'),where('teamUid','==',state.user.uid)),snap=>{state.claims=snap.docs.map(d=>({id:d.id,...d.data()}));render()}));
 }
+
+$('#leaveQuizBtn').onclick=()=>{
+  cleanup();
+  localStorage.removeItem('stpTeamQuiz');
+
+  // Leave the server-side team record intact so an accidental tap does not
+  // erase scores. This device simply stops following the old quiz.
+  state.quiz=null;
+  state.rounds=[];
+  state.team=null;
+  state.subs=[];
+  state.claims=[];
+
+  $('#quizPanel').classList.add('hidden');
+  $('#leaveQuizBtn').classList.add('hidden');
+  $('#joinPanel').classList.remove('hidden');
+  $('#joinError').textContent='';
+  $('#codeInput').value='';
+  $('#teamNameInput').value='';
+  $('#codeInput').focus();
+  toast('Left quiz — enter a new code to join another');
+};
 
 function render(){
   if(!state.quiz||!state.team)return;
