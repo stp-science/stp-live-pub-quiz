@@ -117,8 +117,8 @@ function submittedAnswersHtml(r,sub){return `<div class="answer-grid" style="mar
 
 function renderLeaderboardGate(){
   const box=$('#leaderboardArea');
-  if(!state.quiz.revealLeaderboard){box.classList.add('hidden');state.leaderUnsub?.();state.leaderUnsub=null;return}
-  box.classList.remove('hidden');box.innerHTML='<h2>🏆 Leaderboard</h2><p class="muted">Loading scores…</p>';
-  if(!state.leaderUnsub){state.leaderUnsub=onSnapshot(collection(db,'quizzes',state.quiz.id,'leaderboard'),snap=>{const rows=snap.docs.map(d=>d.data()).sort((a,b)=>(b.score||0)-(a.score||0));const top=Number(state.quiz.revealTopN||5);box.innerHTML=`<h2>🏆 Leaderboard</h2><div class="leaderboard">${rows.slice(0,top>0?top:rows.length).map((t,i)=>`<div class="leader-row"><div class="place">${i+1}</div><div class="name">${escapeHtml(t.name)}</div><div class="score">${formatScore(t.score)}</div></div>`).join('')}</div>`})}
+  box.classList.add('hidden');
+  state.leaderUnsub?.();
+  state.leaderUnsub=null;
 }
 function startTimerLoop(){clearInterval(state.timer);state.timer=setInterval(()=>{const el=$('#teamTimer');if(!el||!state.quiz?.timerEndsAt)return;const ms=state.quiz.timerEndsAt-Date.now();el.textContent=msToClock(ms);el.classList.toggle('danger',ms<10000)},250)}
