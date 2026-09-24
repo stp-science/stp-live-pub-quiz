@@ -22,22 +22,6 @@ function currentRound(){return state.rounds.find(r=>r.id===state.quiz?.currentRo
 function teamName(uid){return state.teams.find(t=>t.uid===uid)?.name || 'Unknown team'}
 
 
-function applyPhoneMode(on){
-  document.body.classList.toggle('phone-mode',on);
-  localStorage.setItem('stpPhoneMode',on?'1':'0');
-  const btn=$('#phoneModeBtn');
-  if(btn){
-    btn.textContent=on?'↩ Full dashboard':'📱 Phone mode';
-    btn.classList.toggle('primary',on);
-    btn.classList.toggle('ghost',!on);
-  }
-  if(on && document.querySelector('[data-tab="build"].active')){
-    document.querySelector('[data-tab="live"]')?.click();
-  }
-}
-applyPhoneMode(localStorage.getItem('stpPhoneMode')==='1');
-$('#phoneModeBtn').onclick=()=>applyPhoneMode(!document.body.classList.contains('phone-mode'));
-
 $('#signInBtn').onclick=()=>signInWithPopup(auth,googleProvider).catch(e=>toast(e.message));
 $('#signOutBtn').onclick=()=>signOut(auth);
 
