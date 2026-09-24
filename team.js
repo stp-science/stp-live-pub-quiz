@@ -11,6 +11,21 @@ function currentRound(){return state.rounds.find(r=>r.id===state.quiz?.currentRo
 function currentSub(){const r=currentRound();return r?state.subs.find(s=>s.roundId===r.id):null}
 function currentClaim(){const r=currentRound();return r?state.claims.find(c=>c.roundId===r.id):null}
 function draftKey(){const r=currentRound();return r&&state.quiz?`stpDraft:${state.quiz.id}:${r.id}`:''}
+function answersFromStore(value){
+  if(Array.isArray(value))return value;
+  if(value&&typeof value==='object'){
+    return Object.keys(value)
+      .filter(k=>/^q\d+$/.test(k))
+      .sort((a,b)=>Number(a.slice(1))-Number(b.slice(1)))
+      .map(k=>value[k]);
+  }
+  return [];
+}
+function answersToStore(values){
+  const out={};
+  (values||[]).forEach((value,i)=>{out['q'+i]=value});
+  return out;
+}
 function splitParts(value){
   if(Array.isArray(value))return value;
   if(value&&typeof value==='object'){
@@ -56,7 +71,7 @@ async function enterQuiz(id){
   state.unsubs.push(onSnapshot(doc(db,'quizzes',id),snap=>{if(!snap.exists())return;state.quiz={id:snap.id,...snap.data()};render()}));
   state.unsubs.push(onSnapshot(collection(db,'quizzes',id,'rounds'),snap=>{state.rounds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);render()}));
   state.unsubs.push(onSnapshot(doc(db,'quizzes',id,'teams',state.user.uid),snap=>{if(!snap.exists()){localStorage.removeItem('stpTeamQuiz');location.reload();return}state.team={id:snap.id,...snap.data()};render()}));
-  state.unsubs.push(onSnapshot(query(collection(db,'quizzes',id,'submissions'),where('teamUid','==',state.user.uid)),snap=>{state.subs=snap.docs.map(d=>({id:d.id,...d.data()}));render()}));
+  state.unsubs.push(onSnapshot(query(collection(db,'quizzes',id,'submissions'),where('teamUid','==',state.user.uid)),snap=>{state.subs=snap.docs.map(d=>{const data=d.data();return{id:d.id,...data,answers:answersFromStore(data.answers)}});render()}));
   state.unsubs.push(onSnapshot(query(collection(db,'quizzes',id,'jokerClaims'),where('teamUid','==',state.user.uid)),snap=>{state.claims=snap.docs.map(d=>({id:d.id,...d.data()}));render()}));
 }
 
@@ -161,7 +176,7 @@ async function submitAnswers(){
   try{
     await setDoc(
       doc(db,'quizzes',state.quiz.id,'submissions',id),
-      {teamUid:state.user.uid,roundId:r.id,answers,marked:false,submittedAt:serverTimestamp()},
+      {teamUid:state.user.uid,roundId:r.id,answers:answersToStore(answers),marked:false,submittedAt:serverTimestamp()},
       {merge:true}
     );
     localStorage.removeItem(draftKey());
