@@ -77,19 +77,48 @@ function subscribeQuizDetail(id){
 }
 
 async function createQuiz(template){
-  const id=randomId('quiz_'), joinCode=randomCode(6), now=serverTimestamp();
+  const id=randomId('quiz_'), joinCode=randomCode(6);
   const src=template?structuredClone(sampleQuiz):{title:'New Pub Quiz',settings:{jokersPerTeam:1,revealTopN:5},rounds:[]};
-  const batch=writeBatch(db);
-  batch.set(doc(db,'quizzes',id),{title:src.title,hostUid:state.user.uid,joinCode,status:'lobby',joinOpen:true,currentRoundId:null,revealLeaderboard:false,revealTopN:src.settings?.revealTopN||5,timerEndsAt:null,createdAt:now,updatedAt:now});
-  batch.set(doc(db,'joinCodes',joinCode),{quizId:id,active:true,hostUid:state.user.uid});
-  src.rounds.forEach((round,idx)=>{
-    const rid=randomId('round_');
-    const publicRound={title:round.title,icon:round.icon||'🎲',type:round.type||'standard',instructions:round.instructions||'',order:idx,status:'closed',currentQuestion:0,questionCount:round.questions.length,inputs:round.questions.map(inputDescriptor),jokerAllowed:round.jokerAllowed!==false,maxPoints:round.questions.reduce((s,q)=>s+Number(q.points||1),0)};
-    batch.set(doc(db,'quizzes',id,'rounds',rid),publicRound);
-    batch.set(doc(db,'quizzes',id,'hostRounds',rid),{questions:round.questions,closestScoring:round.closestScoring||[3,2,1]});
-  });
-  await batch.commit();
-  localStorage.setItem('stpHostQuiz',id);toast(template?'Sample quiz created':'Blank quiz created');
+  try{
+    // Create the parent quiz first. Firestore rules for rounds verify that this
+    // quiz already exists and belongs to the signed-in host.
+    const parentBatch=writeBatch(db);
+    parentBatch.set(doc(db,'quizzes',id),{
+      title:src.title,hostUid:state.user.uid,joinCode,status:'lobby',joinOpen:true,
+      currentRoundId:null,revealLeaderboard:false,revealTopN:src.settings?.revealTopN||5,
+      timerEndsAt:null,createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+    });
+    parentBatch.set(doc(db,'joinCodes',joinCode),{quizId:id,active:true,hostUid:state.user.uid});
+    await parentBatch.commit();
+
+    // Now that the parent exists, the host is authorised to create its rounds.
+    if(src.rounds.length){
+      const roundsBatch=writeBatch(db);
+      src.rounds.forEach((round,idx)=>{
+        const rid=randomId('round_');
+        const publicRound={
+          title:round.title,icon:round.icon||'🎲',type:round.type||'standard',
+          instructions:round.instructions||'',order:idx,status:'closed',
+          currentQuestion:0,questionCount:round.questions.length,
+          inputs:round.questions.map(inputDescriptor),
+          jokerAllowed:round.jokerAllowed!==false,
+          maxPoints:round.questions.reduce((s,q)=>s+Number(q.points||1),0)
+        };
+        roundsBatch.set(doc(db,'quizzes',id,'rounds',rid),publicRound);
+        roundsBatch.set(doc(db,'quizzes',id,'hostRounds',rid),{
+          questions:round.questions,closestScoring:round.closestScoring||[3,2,1]
+        });
+      });
+      await roundsBatch.commit();
+    }
+
+    localStorage.setItem('stpHostQuiz',id);
+    toast(template?'Sample quiz created':'Blank quiz created');
+    selectQuiz(id);
+  }catch(e){
+    console.error('Create quiz failed',e);
+    toast('Could not create quiz: '+(e?.message||e));
+  }
 }
 $('#createSampleBtn').onclick=()=>createQuiz(true);
 $('#createBlankBtn').onclick=()=>createQuiz(false);
