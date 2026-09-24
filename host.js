@@ -6,7 +6,7 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-ai3';
+} from './core.js?v=20260924-musicfix1';
 import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai-fallback1';
 
 const state = {
@@ -549,9 +549,16 @@ function autoMarkClosest(ctx){
   ctx.subs.forEach(sub=>{const results=resultsByTeam.get(sub.teamUid);state.marks.set(sub.teamUid,{results,mult:1,sub});renderTeamMarks(sub.teamUid,ctx.host.questions,results,1)});
 }
 
+function hostResponseText(value){
+  if(Array.isArray(value))return value.join(' / ');
+  if(value&&typeof value==='object'){
+    return Object.keys(value).filter(k=>/^part\d+$/.test(k)).sort((a,b)=>Number(a.slice(4))-Number(b.slice(4))).map(k=>value[k]??'').join(' / ');
+  }
+  return value??'';
+}
 function renderTeamMarks(uid,questions,results,mult){
   const box=$(`#mark-${CSS.escape(uid)}`);if(!box)return;
-  const sub=state.marks.get(uid)?.sub;box.innerHTML=questions.map((q,i)=>{const res=results[i],answer=Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'');return `<div class="answer-row ${res.status}"><div class="mark-grid"><div><strong>Q${i+1}</strong><div class="muted tiny">${escapeHtml(q.prompt)}</div></div><div><div>Team: <strong>${escapeHtml(answer)}</strong></div><div class="muted tiny">${escapeHtml(res.note||'')}</div></div><div class="field"><label>Points</label><input type="number" min="0" step="0.5" value="${res.points}" data-mark-uid="${uid}" data-mark-i="${i}"></div></div></div>`}).join('');
+  const sub=state.marks.get(uid)?.sub;box.innerHTML=questions.map((q,i)=>{const res=results[i],answer=hostResponseText(sub.answers?.[i]);return `<div class="answer-row ${res.status}"><div class="mark-grid"><div><strong>Q${i+1}</strong><div class="muted tiny">${escapeHtml(q.prompt)}</div></div><div><div>Team: <strong>${escapeHtml(answer)}</strong></div><div class="muted tiny">${escapeHtml(res.note||'')}</div></div><div class="field"><label>Points</label><input type="number" min="0" step="0.5" value="${res.points}" data-mark-uid="${uid}" data-mark-i="${i}"></div></div></div>`}).join('');
   const raw=results.reduce((s,r)=>s+Number(r.points||0),0);$(`[data-team-total="${CSS.escape(uid)}"]`).textContent=`${formatScore(raw)}${mult===2?' × 2 joker':''}`;
   $$(`[data-mark-uid="${CSS.escape(uid)}"]`).forEach(inp=>inp.oninput=()=>{const entry=state.marks.get(uid);entry.results[Number(inp.dataset.markI)].points=Number(inp.value||0);const raw2=entry.results.reduce((s,r)=>s+Number(r.points||0),0);$(`[data-team-total="${CSS.escape(uid)}"]`).textContent=`${formatScore(raw2)}${entry.mult===2?' × 2 joker':''}`;});
 }
