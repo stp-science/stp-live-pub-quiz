@@ -19,6 +19,16 @@ function cleanupDetails(){state.detailUnsubs.forEach(fn=>fn?.());state.detailUns
 function cleanupAll(){cleanupDetails();state.quizListUnsub?.();state.quizListUnsub=null}
 function isHostUser(user){return user && !user.isAnonymous}
 function quizId(){return state.quiz?.id}
+function answersFromStore(value){
+  if(Array.isArray(value))return value;
+  if(value&&typeof value==='object'){
+    return Object.keys(value)
+      .filter(k=>/^q\d+$/.test(k))
+      .sort((a,b)=>Number(a.slice(1))-Number(b.slice(1)))
+      .map(k=>value[k]);
+  }
+  return [];
+}
 function currentRound(){return state.rounds.find(r=>r.id===state.quiz?.currentRoundId)||null}
 function teamName(uid){return state.teams.find(t=>t.uid===uid)?.name || 'Unknown team'}
 
@@ -41,7 +51,7 @@ function subscribeQuizzes(){
   const q=query(collection(db,'quizzes'),where('hostUid','==',state.user.uid));
   state.quizListUnsub?.();
   state.quizListUnsub=onSnapshot(q,snap=>{
-    state.quizzes=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    state.quizzes=snap.docs.map(d=>{const data=d.data();return{id:d.id,...data,answers:answersFromStore(data.answers)}}).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
     renderQuizSelect();
 
     // Keep the current quiz selected while it still exists. Only auto-select
@@ -164,22 +174,22 @@ function subscribeQuizDetail(id,generation=state.detailGeneration){
 
   state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'rounds'),snap=>{
     if(!valid())return;
-    state.rounds=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);renderAll();
+    state.rounds=snap.docs.map(d=>{const data=d.data();return{id:d.id,...data,answers:answersFromStore(data.answers)}}).sort((a,b)=>a.order-b.order);renderAll();
   },err=>{if(valid()){console.error('Rounds listener failed',err);toast('Rounds error: '+err.message)}}));
 
   state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'teams'),snap=>{
     if(!valid())return;
-    state.teams=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.totalScore||0)-(a.totalScore||0));renderAll();
+    state.teams=snap.docs.map(d=>{const data=d.data();return{id:d.id,...data,answers:answersFromStore(data.answers)}}).sort((a,b)=>(b.totalScore||0)-(a.totalScore||0));renderAll();
   },err=>{if(valid()){console.error('Teams listener failed',err);toast('Teams error: '+err.message)}}));
 
   state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'submissions'),snap=>{
     if(!valid())return;
-    state.submissions=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();
+    state.submissions=snap.docs.map(d=>{const data=d.data();return{id:d.id,...data,answers:answersFromStore(data.answers)}});renderAll();
   },err=>{if(valid()){console.error('Submissions listener failed',err);toast('Submissions error: '+err.message)}}));
 
   state.detailUnsubs.push(onSnapshot(collection(db,'quizzes',id,'jokerClaims'),snap=>{
     if(!valid())return;
-    state.jokerClaims=snap.docs.map(d=>({id:d.id,...d.data()}));renderAll();
+    state.jokerClaims=snap.docs.map(d=>{const data=d.data();return{id:d.id,...data,answers:answersFromStore(data.answers)}});renderAll();
   },err=>{if(valid()){console.error('Joker listener failed',err);toast('Joker error: '+err.message)}}));
 }
 
