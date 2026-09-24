@@ -47,7 +47,25 @@ export function similarity(a,b){const x=normalizeAnswer(a),y=normalizeAnswer(b);
 export function markOne(question,response){
   const max=Number(question.points??1),mode=question.answerMode||'text';
   if(mode==='number'){const got=Number(response),target=Number(question.numericAnswer),tol=Math.abs(Number(question.tolerance??0));if(!Number.isFinite(got))return{points:0,status:'wrong',note:'Not a number'};return Math.abs(got-target)<=tol?{points:max,status:'correct',note:`Within ±${tol}`}:{points:0,status:'wrong',note:`Expected ${target}${tol?` ±${tol}`:''}`};}
-  if(mode==='split'){const parts=Array.isArray(response)?response:[],keys=question.partAnswers||[];let points=0;const details=[];keys.forEach((key,i)=>{const accepted=(key.accepted||[]).map(normalizeAnswer),ok=accepted.includes(normalizeAnswer(parts[i]||'')),p=Number(key.points??1);if(ok)points+=p;details.push(ok?'correct':'wrong');});return{points,status:points===max?'correct':points?'partial':'wrong',note:details.join(', ')};}
+  if(mode==='split'){
+    const parts=Array.isArray(response)?response:[],keys=question.partAnswers||[];
+    let points=0;const details=[];
+    keys.forEach((key,i)=>{
+      const accepted=(key.accepted||[]).map(normalizeAnswer).filter(Boolean);
+      const got=normalizeAnswer(parts[i]||'');
+      let ok=accepted.includes(got),spelling=false;
+      if(!ok&&got){
+        for(const ans of accepted){
+          const dist=typoDistance(got,ans),score=similarity(got,ans),longest=Math.max(got.length,ans.length);
+          if((longest>=4&&dist===1)||(longest>=8&&dist<=2&&score>=0.78)){ok=true;spelling=true;break;}
+        }
+      }
+      const p=Number(key.points??1);
+      if(ok)points+=p;
+      details.push(ok?(spelling?'spelling accepted':'correct'):'wrong');
+    });
+    return{points,status:points===max?'correct':points?'partial':'wrong',note:details.join(', ')};
+  }
   const accepted=(question.accepted||[]).map(normalizeAnswer).filter(Boolean),got=normalizeAnswer(response);
   if(accepted.includes(got))return{points:max,status:'correct',note:'Exact accepted answer'};
 
@@ -89,27 +107,104 @@ export function inputDescriptor(question,idx){const mode=question.answerMode||'t
 export function beep(freq=700,duration=.12){try{const ctx=new(window.AudioContext||window.webkitAudioContext)(),osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=freq;osc.connect(gain);gain.connect(ctx.destination);gain.gain.setValueAtTime(.08,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);osc.start();osc.stop(ctx.currentTime+duration);}catch{}}
 export function msToClock(ms){const total=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(total/60),s=total%60;return`${m}:${String(s).padStart(2,'0')}`;}
 export function mediaEmbed(url=''){if(!url)return'';const safe=escapeHtml(url),yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{6,})/);if(yt)return`<div class="media-frame"><iframe src="https://www.youtube.com/embed/${yt[1]}" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`;if(/\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url))return`<audio controls preload="metadata" src="${safe}"></audio>`;if(/\.(mp4|webm|mov)(\?|$)/i.test(url))return`<video controls preload="metadata" src="${safe}"></video>`;return`<img class="question-media" src="${safe}" alt="Question media">`;}
-export const sampleQuiz={title:'Year 9 & 10 Pub Quiz',settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},rounds:[
-{title:'Zoomed In',icon:'🔎',type:'picture',instructions:'Identify the object from the close-up image.',jokerAllowed:true,questions:Array.from({length:5},(_,i)=>({id:`zoom${i+1}`,prompt:`Zoomed-in image ${i+1}`,mediaUrl:'',answerMode:'text',accepted:['replace me'],points:1}))},
-{title:'What on Earth?',icon:'🌍',type:'standard',instructions:'Weird but true general knowledge.',jokerAllowed:true,questions:[
-{id:'weird1',prompt:'Which animal is famous for producing cube-shaped droppings?',answerMode:'text',accepted:['wombat','a wombat'],points:1},
-{id:'weird2',prompt:'Which planet has the shortest day in our Solar System?',answerMode:'text',accepted:['jupiter'],points:1},
-{id:'weird3',prompt:'What is the only mammal capable of true sustained flight?',answerMode:'text',accepted:['bat','bats'],points:1},
-{id:'weird4',prompt:'What colour is a polar bear’s skin beneath its fur?',answerMode:'text',accepted:['black','dark','dark grey','dark gray'],points:1},
-{id:'weird5',prompt:'What is the largest organ of the human body?',answerMode:'text',accepted:['skin','the skin'],points:1}]},
-{title:'Name That Tune',icon:'🎵',type:'music',instructions:'Name the song and artist from the clip.',jokerAllowed:true,questions:Array.from({length:5},(_,i)=>({id:`music${i+1}`,prompt:`Play music clip ${i+1}`,mediaUrl:'',answerMode:'split',points:2,partAnswers:[{label:'Song',accepted:['replace me'],points:1},{label:'Artist',accepted:['replace me'],points:1}]}))},
-{title:'Science or Nonsense?',icon:'🧪',type:'choice',instructions:'Decide whether each statement is true or false.',jokerAllowed:true,questions:[
-{id:'sci1',prompt:'Wombat droppings can be cube-shaped.',answerMode:'choice',choices:['True','False'],accepted:['true'],points:1},
-{id:'sci2',prompt:'Sound travels faster in air than in steel.',answerMode:'choice',choices:['True','False'],accepted:['false'],points:1},
-{id:'sci3',prompt:'Octopuses have three hearts.',answerMode:'choice',choices:['True','False'],accepted:['true'],points:1},
-{id:'sci4',prompt:'Lightning never strikes the same place twice.',answerMode:'choice',choices:['True','False'],accepted:['false'],points:1},
-{id:'sci5',prompt:'A day on Venus is longer than a year on Venus.',answerMode:'choice',choices:['True','False'],accepted:['true'],points:1}]},
-{title:'The Connection',icon:'🔗',type:'connection',instructions:'Answer the clues, then identify the connection.',jokerAllowed:true,questions:[
-{id:'con1',prompt:'Connection set 1 — clue 1',answerMode:'text',accepted:['replace me'],points:1},{id:'con2',prompt:'Connection set 1 — clue 2',answerMode:'text',accepted:['replace me'],points:1},{id:'con3',prompt:'Connection set 1 — clue 3',answerMode:'text',accepted:['replace me'],points:1},{id:'con4',prompt:'Connection set 1 — clue 4',answerMode:'text',accepted:['replace me'],points:1},{id:'con5',prompt:'What connects all four answers?',answerMode:'text',accepted:['replace me'],points:2}]},
-{title:'Mystery Sounds',icon:'🔊',type:'music',instructions:'Identify the sound.',jokerAllowed:true,questions:Array.from({length:5},(_,i)=>({id:`sound${i+1}`,prompt:`Mystery sound ${i+1}`,mediaUrl:'',answerMode:'text',accepted:['replace me'],points:1}))},
-{title:'Picture Round',icon:'🖼️',type:'picture',instructions:'Identify each image.',jokerAllowed:true,questions:Array.from({length:8},(_,i)=>({id:`pic${i+1}`,prompt:`Picture ${i+1}`,mediaUrl:'',answerMode:'text',accepted:['replace me'],points:1}))},
-{title:'Closest Wins',icon:'🎯',type:'closest',instructions:'Closest answer wins. Exact knowledge not required.',jokerAllowed:false,closestScoring:[3,2,1],questions:[
-{id:'close1',prompt:'How many bones are in the adult human body?',answerMode:'closest',numericAnswer:206,points:3,closestRule:'absolute'},
-{id:'close2',prompt:'Approximately how many kilometres is Earth’s equatorial circumference?',answerMode:'closest',numericAnswer:40075,points:3,closestRule:'absolute'},
-{id:'close3',prompt:'How tall is the Sky Tower in Auckland, in metres?',answerMode:'closest',numericAnswer:328,points:3,closestRule:'absolute'}]}
-]};
+export const sampleQuiz={
+  title:'Year 9 & 10 Pub Quiz 2026',
+  settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
+  rounds:[
+    {
+      title:'Zoomed In',icon:'🔎',type:'picture',
+      instructions:'Five extreme close-ups. Ask only: “What is this?”',
+      jokerAllowed:true,
+      questions:[
+        {id:'zoom1',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tennis_ball_closeup.jpg',answerMode:'text',accepted:['tennis ball','a tennis ball'],points:1},
+        {id:'zoom2',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/LCD_pixels_RGB.jpg',answerMode:'text',accepted:['screen pixels','pixels','lcd pixels','display pixels','computer screen pixels','phone screen pixels','screen'],points:1},
+        {id:'zoom3',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/BallpointMacro.jpg',answerMode:'text',accepted:['ballpoint pen','pen tip','ballpoint pen tip','biro','biro tip','pen'],points:1},
+        {id:'zoom4',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Zipper_slider_0000_02.jpg',answerMode:'text',accepted:['zip','zipper','zipper slider','zip slider'],points:1},
+        {id:'zoom5',prompt:'What is this?',mediaUrl:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Kiwifruit_skin..jpg',answerMode:'text',accepted:['kiwi fruit','kiwifruit','kiwi','kiwi skin','kiwifruit skin'],points:1}
+      ]
+    },
+    {
+      title:'What on Earth?',icon:'🌍',type:'standard',
+      instructions:'Five weird-but-true general knowledge questions.',
+      jokerAllowed:true,
+      questions:[
+        {id:'weird1',prompt:'Which country has more ancient pyramids than Egypt?',answerMode:'text',accepted:['sudan'],points:1},
+        {id:'weird2',prompt:'Which animal has fingerprints remarkably similar to human fingerprints?',answerMode:'text',accepted:['koala','koalas','a koala'],points:1},
+        {id:'weird3',prompt:'Which planet is less dense than water and would theoretically float in an ocean large enough?',answerMode:'text',accepted:['saturn'],points:1},
+        {id:'weird4',prompt:'Which country has the world’s only national flag that is not rectangular or square?',answerMode:'text',accepted:['nepal'],points:1},
+        {id:'weird5',prompt:'What food can remain edible for an extremely long time when stored properly and has been found preserved in ancient tombs?',answerMode:'text',accepted:['honey'],points:1}
+      ]
+    },
+    {
+      title:'Name That Tune',icon:'🎵',type:'music',
+      instructions:'Play about 6–8 seconds from your music service. One point for song title and one for artist. Keep the projector on the question number so the title is not revealed.',
+      jokerAllowed:true,
+      questions:[
+        {id:'music1',prompt:'Music clip 1 — play APT. (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+          {label:'Song',accepted:['apt','apt.'],points:1},
+          {label:'Artist',accepted:['rose and bruno mars','rosé and bruno mars','bruno mars and rose','bruno mars and rosé','rose & bruno mars','rosé & bruno mars'],points:1}
+        ]},
+        {id:'music2',prompt:'Music clip 2 — play BIRDS OF A FEATHER (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+          {label:'Song',accepted:['birds of a feather'],points:1},
+          {label:'Artist',accepted:['billie eilish'],points:1}
+        ]},
+        {id:'music3',prompt:'Music clip 3 — play Blinding Lights (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+          {label:'Song',accepted:['blinding lights'],points:1},
+          {label:'Artist',accepted:['the weeknd','weeknd'],points:1}
+        ]},
+        {id:'music4',prompt:'Music clip 4 — play Royals (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+          {label:'Song',accepted:['royals'],points:1},
+          {label:'Artist',accepted:['lorde'],points:1}
+        ]},
+        {id:'music5',prompt:'Music clip 5 — play Don’t Stop Me Now (about 6–8 seconds).',mediaUrl:'',answerMode:'split',points:2,partAnswers:[
+          {label:'Song',accepted:["don't stop me now",'dont stop me now'],points:1},
+          {label:'Artist',accepted:['queen'],points:1}
+        ]}
+      ]
+    },
+    {
+      title:'Watch Closely',icon:'👀',type:'video',
+      instructions:'Play the Whodunnit? video ONCE and PAUSE at 0:56, before the video reveals the changes. Then read the five questions. Do not replay until answers are submitted.',
+      jokerAllowed:true,
+      questions:[
+        {id:'watch1',prompt:'The suit of armour on the right was replaced by what?',mediaUrl:'https://www.youtube.com/watch?v=ubNF9QNEQLA',answerMode:'text',accepted:['bear','a bear','teddy bear','a teddy bear'],points:1},
+        {id:'watch2',prompt:'What happened to the dead body on the floor during the scene?',mediaUrl:'',answerMode:'text',accepted:['it changed','body changed','the body changed','different body','different man','different person','the man changed','the person changed','corpse changed','victim changed'],points:1},
+        {id:'watch3',prompt:'What colour did the detective’s coat change to?',mediaUrl:'',answerMode:'text',accepted:['white','cream','light','light coloured','light colored'],points:1},
+        {id:'watch4',prompt:'What kitchen object was replaced by a candelabra?',mediaUrl:'',answerMode:'text',accepted:['rolling pin','a rolling pin'],points:1},
+        {id:'watch5',prompt:'Name the floor furnishing that changed during the scene.',mediaUrl:'',answerMode:'text',accepted:['rug','carpet','the rug','the carpet'],points:1}
+      ]
+    },
+    {
+      title:'Which One Is Fake?',icon:'🤔',type:'choice',
+      instructions:'Read A, B and C aloud. Two statements are true; one is fake. Teams enter A, B or C.',
+      jokerAllowed:true,
+      questions:[
+        {id:'fake1',prompt:'A: Wombats can produce cube-shaped droppings. B: Octopuses have three hearts. C: Flamingos are naturally born bright pink. Which one is fake?',answerMode:'choice',choices:['A','B','C'],accepted:['C','c'],points:1},
+        {id:'fake2',prompt:'A: Post-it Notes were invented to stop pages falling out of library books. B: Bubble Wrap was originally intended as textured wallpaper. C: The microwave oven idea followed an engineer noticing food melting near radar equipment. Which one is fake?',answerMode:'choice',choices:['A','B','C'],accepted:['A','a'],points:1},
+        {id:'fake3',prompt:'A: Your skin is your largest organ. B: Adults normally have more bones than newborn babies. C: The classic “tongue map” with separate taste zones is a myth. Which one is fake?',answerMode:'choice',choices:['A','B','C'],accepted:['B','b'],points:1},
+        {id:'fake4',prompt:'A: A day on Venus is longer than a year on Venus. B: Footprints on the Moon can remain for millions of years because there is almost no weather or erosion. C: The Sun is the largest star known to exist. Which one is fake?',answerMode:'choice',choices:['A','B','C'],accepted:['C','c'],points:1}
+      ]
+    },
+    {
+      title:'What’s the Connection?',icon:'🔗',type:'connection',
+      instructions:'Read the four clues. Teams identify what connects all four. Two points each.',
+      jokerAllowed:true,
+      questions:[
+        {id:'con1',prompt:'Kākāpō — Kiwi — Ostrich — Emu. What connects all four?',answerMode:'text',accepted:['flightless birds','flightless bird','birds that cannot fly','birds that cant fly','cannot fly','cant fly'],points:2},
+        {id:'con2',prompt:'Wednesday — Thing — Morticia — Gomez. What connects all four?',answerMode:'text',accepted:['the addams family','addams family','addams'],points:2},
+        {id:'con3',prompt:'Mercury — Gemini — Apollo — Artemis. What connects all four?',answerMode:'text',accepted:['nasa space programmes','nasa space programs','nasa programs','nasa programmes','space programs','space programmes','nasa missions','space missions'],points:2},
+        {id:'con4',prompt:'Mustang — Beetle — Panda — Golf. What connects all four?',answerMode:'text',accepted:['car models','cars','car names','models of cars','vehicle models'],points:2}
+      ]
+    },
+    {
+      title:'Closest Wins',icon:'🎯',type:'closest',
+      instructions:'Final round. Teams enter one number only. Closest answer gets 3 points, second gets 2, third gets 1. Joker unavailable.',
+      jokerAllowed:false,closestScoring:[3,2,1],
+      questions:[
+        {id:'close1',prompt:'What is the average distance from Earth to the Moon, in kilometres?',answerMode:'closest',numericAnswer:384400,points:3,closestRule:'absolute',placeholder:'km'},
+        {id:'close2',prompt:'How many litres of water would fill a pool measuring 50 m × 25 m × 2 m?',answerMode:'closest',numericAnswer:2500000,points:3,closestRule:'absolute',placeholder:'litres'},
+        {id:'close3',prompt:'How tall is Auckland’s Sky Tower, in metres?',answerMode:'closest',numericAnswer:328,points:3,closestRule:'absolute',placeholder:'metres'}
+      ]
+    }
+  ]
+};
