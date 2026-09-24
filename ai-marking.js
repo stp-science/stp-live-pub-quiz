@@ -1,4 +1,4 @@
-import { app } from './firebase.js';
+import { app } from './firebase.js?v=20260924-ai-debug2';
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-ai.js';
 
 const ai = getAI(app, { backend: new GoogleAIBackend() });
