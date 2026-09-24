@@ -66,3 +66,17 @@ Each host question has an optional media URL. The presentation screen supports i
 Correct answers and host prompts live in the host-only `hostRounds` collection. Team answer sheets can only be read by that team and the host. Other teams' scores are not readable until the host turns on the separate leaderboard reveal.
 
 Firebase's web configuration object is not a secret; protection comes from Authentication and Firestore security rules. Do not use Firestore test-mode rules for the live quiz.
+
+
+## Quiz media credits
+
+The built-in 2026 Year 9 & 10 quiz uses openly licensed Wikimedia Commons images for the Zoomed In round:
+- Tennis ball close-up — CC0, Wikimedia Commons.
+- LCD pixels RGB — public domain, Wikimedia Commons.
+- Ballpoint macro — public domain, Wikimedia Commons.
+- Zipper slider — CC0, Wikimedia Commons.
+- Kiwifruit skin — Wikimedia Commons (see file page for licence/attribution).
+
+The Watch Closely round uses Transport for London's 2008 awareness film "Whodunnit?" via YouTube. The host instructions tell the presenter to pause before the video's own reveal section.
+
+Popular-song audio is not bundled with this repository. The host should play the five selected tracks from a music service they are authorised to use.
