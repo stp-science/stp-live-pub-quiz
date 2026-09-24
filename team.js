@@ -54,7 +54,7 @@ function renderRound(){
   const r=currentRound(), box=$('#roundArea');
   if(!r){box.innerHTML=`<h2>Waiting for the host</h2><p class="muted">You’re in. The first round will appear here when it is selected.</p>`;return}
   const sub=currentSub(), claim=currentClaim();
-  let body=`<div class="muted tiny">ROUND ${(r.order??0)+1}</div><h1 class="team-round-title">${r.icon||'🎲'} ${escapeHtml(r.title)}</h1><p>${escapeHtml(r.instructions||'Listen to the host for the questions.')}</p>`;
+  let body=`<div class="muted tiny">ROUND ${(r.order??0)+1}</div><h1 class="team-round-title">${r.icon||'🎲'} ${escapeHtml(r.title)}</h1><p class="muted">Listen to the host and enter your answers below.</p>`;
   if(r.status==='ready'){
     body+=`<div class="pill status-ready">Get ready — answers are not open yet.</div>`;
     if(r.jokerAllowed!==false&&!state.team.jokerUsedRoundId){body+=claim?`<div class="submit-banner" style="margin-top:14px">🃏 Joker played for this round. Your round score will be doubled.</div>`:`<button id="jokerBtn" class="btn primary big" style="margin-top:14px">🃏 Play joker on this round</button><p class="muted tiny" style="margin-top:8px">Once the host opens the round, you can’t add the joker.</p>`}
@@ -77,7 +77,7 @@ function answerSheetHtml(r,sub){
   return `<div class="answer-grid" style="margin-top:18px">${(r.inputs||[]).map((inp,i)=>inputHtml(inp,i,answers[i])).join('')}</div><button id="submitBtn" class="btn good big" style="margin-top:16px">${sub?'Update answers':'Submit round'}</button>`;
 }
 function inputHtml(inp,i,value){
-  const label=escapeHtml(inp.label||`Question ${i+1}`),mode=inp.mode||'text';
+  const label=`Answer ${i+1}`,mode=inp.mode||'text';
   if(mode==='split')return `<div class="answer-row"><strong>${label}</strong><div class="grid two" style="margin-top:8px">${(inp.partLabels||['Part 1','Part 2']).map((p,j)=>`<div class="field"><label>${escapeHtml(p)}</label><input class="big-input" data-answer="${i}" data-part="${j}" value="${escapeHtml(Array.isArray(value)?(value[j]||''):'')}"></div>`).join('')}</div></div>`;
   if(mode==='choice')return `<div class="answer-row"><div class="field"><label>${label}</label><select class="big-input" data-answer="${i}"><option value="">Choose…</option>${(inp.choices||[]).map(c=>`<option value="${escapeHtml(c)}" ${String(value||'')===String(c)?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></div></div>`;
   const type=['number','closest'].includes(mode)?'number':'text';return `<div class="answer-row"><div class="field"><label>${label}</label><input class="big-input" type="${type}" step="${type==='number'?'any':''}" data-answer="${i}" value="${escapeHtml(value??'')}" placeholder="${escapeHtml(inp.placeholder||'Answer')}"></div></div>`;
@@ -113,7 +113,7 @@ async function playJoker(){
   const r=currentRound();if(!r||r.status!=='ready'||state.team.jokerUsedRoundId)return;
   const id=`${state.user.uid}_${r.id}`;await setDoc(doc(db,'quizzes',state.quiz.id,'jokerClaims',id),{teamUid:state.user.uid,roundId:r.id,createdAt:serverTimestamp()});toast('Joker played!');
 }
-function submittedAnswersHtml(r,sub){return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>`<div class="answer-row"><span class="muted">${escapeHtml(inp.label||`Q${i+1}`)}:</span> <strong>${escapeHtml(Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'—'))}</strong></div>`).join('')}</div>`}
+function submittedAnswersHtml(r,sub){return `<div class="answer-grid" style="margin-top:10px">${(r.inputs||[]).map((inp,i)=>`<div class="answer-row"><span class="muted">Answer ${i+1}:</span> <strong>${escapeHtml(Array.isArray(sub.answers?.[i])?sub.answers[i].join(' / '):(sub.answers?.[i]??'—'))}</strong></div>`).join('')}</div>`}
 
 function renderLeaderboardGate(){
   const box=$('#leaderboardArea');
