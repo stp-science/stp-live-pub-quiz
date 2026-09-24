@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Host | STP Live Pub Quiz</title><link rel="stylesheet" href="styles.css?v=20260924-phone2"></head><body>
 <div class="shell">
-  <div class="topbar"><div class="brand"><div class="logo">🎤</div><div><strong>Host Dashboard</strong><div class="muted tiny">STP Live Pub Quiz</div></div></div><div class="actions"><button id="phoneModeBtn" class="btn ghost" type="button">📱 Phone mode</button><a class="btn ghost" href="index.html">Home</a><button id="signOutBtn" class="btn ghost hidden">Sign out</button></div></div>
+  <div class="topbar"><div class="brand"><div class="logo">🎤</div><div><strong>Host Dashboard</strong><div class="muted tiny">STP Live Pub Quiz</div></div></div><div class="actions"><button id="phoneModeBtn" class="btn ghost" type="button" onclick="window.toggleHostPhoneMode && window.toggleHostPhoneMode(this)">📱 Phone mode</button><a class="btn ghost" href="index.html">Home</a><button id="signOutBtn" class="btn ghost hidden">Sign out</button></div></div>
   <section id="authGate" class="card hero"><h1>Host your quiz.</h1><p>Sign in with Google so only you can edit questions, see answer keys and control marking.</p><button id="signInBtn" class="btn primary big">Sign in with Google</button><p class="muted tiny" style="margin-top:14px">Enable Google sign-in in Firebase Authentication first. Setup instructions are included in the project.</p></section>
   <div id="hostApp" class="hidden">
     <div id="desktopSetup" class="grid two">
@@ -13,4 +13,30 @@
     <section id="tab-mark" class="tab-panel hidden"><div class="card"><div class="actions" style="justify-content:space-between"><div><h2>Mark current round</h2><p id="markSubtitle" class="muted">Lock a round before marking.</p></div><div class="actions"><button id="autoMarkBtn" class="btn primary">Auto mark</button><button id="saveMarksBtn" class="btn good">Save scores</button></div></div><div id="markingArea"></div></div></section>
     <section id="tab-teams" class="tab-panel hidden"><div class="grid two"><div class="card"><div class="actions" style="justify-content:space-between"><div><h2 style="margin-bottom:6px">Leaderboard</h2><div id="leaderboardVisibility" class="pill">Hidden from projector</div></div><button id="toggleLeaderboardBtn" class="btn primary">Reveal leaderboard</button></div><p class="muted tiny" style="margin-top:12px">This list is always visible to you as the host. The button controls whether the projector can see it. Student devices only ever show their own score.</p><div id="hostLeaderboard" class="leaderboard"></div></div><div class="card"><h2>Team management</h2><div id="teamManager" class="team-list"></div></div></div></section>
   </div>
-</div><div id="toast" class="toast hidden"></div><script type="module" src="host.js?v=20260924-phone2"></script></body></html>
+</div><div id="toast" class="toast hidden"></div><script>
+(function(){
+  function setPhoneMode(on,btn){
+    document.body.classList.toggle('phone-mode',on);
+    try{localStorage.setItem('stpPhoneMode',on?'1':'0')}catch(e){}
+    btn=btn||document.getElementById('phoneModeBtn');
+    if(btn){
+      btn.textContent=on?'↩ Full dashboard':'📱 Phone mode';
+      btn.classList.toggle('primary',on);
+      btn.classList.toggle('ghost',!on);
+    }
+    if(on){
+      var active=document.querySelector('[data-tab="build"].active');
+      var live=document.querySelector('[data-tab="live"]');
+      if(active&&live) live.click();
+    }
+  }
+  window.toggleHostPhoneMode=function(btn){
+    setPhoneMode(!document.body.classList.contains('phone-mode'),btn);
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    var on=false;
+    try{on=localStorage.getItem('stpPhoneMode')==='1'}catch(e){}
+    setPhoneMode(on);
+  });
+})();
+</script><script type="module" src="host.js?v=20260924-phone3"></script></body></html>
