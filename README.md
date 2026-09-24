@@ -80,3 +80,8 @@ The built-in 2026 Year 9 & 10 quiz uses openly licensed Wikimedia Commons images
 The Watch Closely round uses Transport for London's 2008 awareness film "Whodunnit?" via YouTube. The host instructions tell the presenter to pause before the video's own reveal section.
 
 Popular-song audio is not bundled with this repository. The host should play the five selected tracks from a music service they are authorised to use.
+
+
+### Additional Zoomed In microscope sources
+- Match head microscope photograph: Pikabu user-uploaded microscope image (remote image embedded; not redistributed in this repository).
+- Potato chips under microscope: Mikrula, 200× microscope image (remote image embedded; not redistributed in this repository).
