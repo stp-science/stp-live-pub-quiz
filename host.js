@@ -454,7 +454,17 @@ async function autoMark(){
     $('#saveMarksBtn').disabled=false;
   }catch(e){
     console.error('Automatic marking failed',e);
-    toast('AI check unavailable — rule-based marks shown for review');
+    const detail=(e?.message||String(e)).slice(0,500);
+    toast('AI check unavailable — see error on Mark screen');
+    const area=$('#markingArea');
+    if(area){
+      const err=document.createElement('div');
+      err.className='card';
+      err.style.cssText='margin-top:12px;border:1px solid #8a3540;background:#32171c';
+      err.innerHTML='<strong>AI marking error</strong><div class="muted tiny" style="margin-top:6px;word-break:break-word"></div>';
+      err.querySelector('div').textContent=detail;
+      area.prepend(err);
+    }
     if(state.marks.size)$('#saveMarksBtn').disabled=false;
   }finally{
     state.aiMarking=false;
