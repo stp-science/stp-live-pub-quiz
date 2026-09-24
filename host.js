@@ -168,6 +168,52 @@ async function createQuiz(template){
 $('#createSampleBtn').onclick=()=>createQuiz(true);
 $('#createBlankBtn').onclick=()=>createQuiz(false);
 
+$('#deleteQuizBtn').onclick=async()=>{
+  if(!state.quiz)return;
+  const id=quizId(),title=state.quiz.title||'this quiz',joinCode=state.quiz.joinCode||'';
+  if(!confirm(`Delete "${title}"? This permanently removes its rounds, teams, submissions and scores.`))return;
+
+  const btn=$('#deleteQuizBtn');
+  btn.disabled=true;btn.textContent='Deleting…';
+  try{
+    const subcollections=['rounds','hostRounds','teams','submissions','jokerClaims','leaderboard'];
+
+    // Delete child documents first.
+    for(const sub of subcollections){
+      const snap=await getDocs(collection(db,'quizzes',id,sub));
+      if(!snap.empty){
+        let batch=writeBatch(db),count=0;
+        for(const d of snap.docs){
+          batch.delete(d.ref);count++;
+          if(count===400){
+            await batch.commit();
+            batch=writeBatch(db);count=0;
+          }
+        }
+        if(count)await batch.commit();
+      }
+    }
+
+    const finalBatch=writeBatch(db);
+    if(joinCode) finalBatch.delete(doc(db,'joinCodes',joinCode));
+    finalBatch.delete(doc(db,'quizzes',id));
+    await finalBatch.commit();
+
+    localStorage.removeItem('stpHostQuiz');
+    state.detailGeneration++;
+    cleanupDetails();
+    state.quiz=null;state.rounds=[];state.teams=[];state.submissions=[];state.jokerClaims=[];
+    state.hostRounds.clear();state.marks.clear();state.markContext=null;
+    renderAll();
+    toast('Quiz deleted');
+  }catch(e){
+    console.error('Delete quiz failed',e);
+    toast('Could not delete quiz: '+(e?.message||e));
+  }finally{
+    btn.disabled=false;btn.textContent='Delete quiz';
+  }
+};
+
 function renderAll(){
   if(!state.quiz){$('#quizSummary').innerHTML='<p class="muted">Create a quiz to get started.</p>';$('#joinCode').textContent='------';return}
   $('#quizSelect').value=state.quiz.id;
