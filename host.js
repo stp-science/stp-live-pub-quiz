@@ -7,10 +7,11 @@ import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
 } from './core.js?v=20260924-paddington-q4fix';
+import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai1';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
-  detailUnsubs:[], quizListUnsub:null, selectingQuizId:null, detailGeneration:0, editRoundId:null, editing:null, marks:new Map()
+  detailUnsubs:[], quizListUnsub:null, selectingQuizId:null, detailGeneration:0, editRoundId:null, editing:null, marks:new Map(), aiMarking:false
 };
 
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.add('hidden'),2500)}
@@ -353,7 +354,19 @@ function renderLivePanel(){
   $('#prevQBtn').onclick=()=>moveQuestion(-1);$('#nextQBtn').onclick=()=>moveQuestion(1);
   $$('[data-timer]',box).forEach(b=>b.onclick=()=>setTimer(Number(b.dataset.timer)));
 }
-async function setRoundStatus(status){const r=currentRound();if(!r)return;await updateDoc(doc(db,'quizzes',quizId(),'rounds',r.id),{status});if(status==='locked'){document.querySelector('[data-tab="mark"]')?.click();toast('Round locked — ready to mark')}}
+async function setRoundStatus(status){
+  const r=currentRound();if(!r)return;
+  await updateDoc(doc(db,'quizzes',quizId(),'rounds',r.id),{status});
+  if(status==='locked'){
+    $('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('[data-tab="mark"]')?.classList.add('active');
+    $('.tab-panel').forEach(p=>p.classList.add('hidden'));
+    $('#tab-mark')?.classList.remove('hidden');
+    toast('Round locked — marking automatically…');
+    await prepareMarking();
+    await autoMark();
+  }
+}
 async function moveQuestion(delta){const r=currentRound();if(!r)return;const next=Math.max(0,Math.min((r.questionCount||1)-1,(r.currentQuestion||0)+delta));await updateDoc(doc(db,'quizzes',quizId(),'rounds',r.id),{currentQuestion:next})}
 async function setTimer(seconds){await updateDoc(doc(db,'quizzes',quizId()),{timerEndsAt:seconds?Date.now()+seconds*1000:null})}
 
@@ -414,27 +427,107 @@ function renderMarkHeader(){const r=currentRound();$('#markSubtitle').textConten
 async function loadHostRound(rid){if(state.hostRounds.has(rid))return state.hostRounds.get(rid);const snap=await getDoc(doc(db,'quizzes',quizId(),'hostRounds',rid));const data=snap.data()||{questions:[]};state.hostRounds.set(rid,data);return data}
 
 async function prepareMarking(){
-  const r=currentRound(), area=$('#markingArea');state.marks.clear();if(!r){area.innerHTML='<p class="muted">Select a round first.</p>';return}
+  const r=currentRound(), area=$('#markingArea');state.marks.clear();state.markContext=null;if(!r){area.innerHTML='<p class="muted">Select a round first.</p>';return}
   const host=await loadHostRound(r.id), subs=currentRoundSubmissions();
-  if(!subs.length){area.innerHTML='<p class="muted">No teams have submitted this round yet.</p>';return}
+  if(!subs.length){area.innerHTML='<p class="muted">No teams have submitted this round yet.</p>';$('#autoMarkBtn').disabled=true;$('#saveMarksBtn').disabled=true;return}
   state.markContext={round:r,host,subs};
   area.innerHTML=subs.map(s=>`<div class="card" style="margin-top:12px"><div class="actions" style="justify-content:space-between"><h3>${escapeHtml(teamName(s.teamUid))}</h3><span class="pill" data-team-total="${s.teamUid}">Not marked</span></div><div id="mark-${s.teamUid}" class="answer-grid"></div></div>`).join('');
   $('#autoMarkBtn').disabled=false;$('#saveMarksBtn').disabled=true;
 }
 
 $('#autoMarkBtn').onclick=()=>autoMark();
-function autoMark(){
-  const ctx=state.markContext;if(!ctx)return;
-  if(ctx.round.type==='closest') autoMarkClosest(ctx); else autoMarkStandard(ctx);
-  $('#saveMarksBtn').disabled=false;
+
+async function autoMark(){
+  const ctx=state.markContext;if(!ctx||state.aiMarking)return;
+  const btn=$('#autoMarkBtn');
+  state.aiMarking=true;
+  btn.disabled=true;
+  btn.textContent='Marking…';
+  $('#saveMarksBtn').disabled=true;
+  try{
+    if(ctx.round.type==='closest'){
+      autoMarkClosest(ctx);
+      toast('Automatic marking complete');
+    }else{
+      await autoMarkStandard(ctx);
+    }
+    $('#saveMarksBtn').disabled=false;
+  }catch(e){
+    console.error('Automatic marking failed',e);
+    toast('AI check unavailable — rule-based marks shown for review');
+    if(state.marks.size)$('#saveMarksBtn').disabled=false;
+  }finally{
+    state.aiMarking=false;
+    btn.disabled=false;
+    btn.textContent='Re-run marking';
+  }
 }
-function autoMarkStandard(ctx){
+
+async function autoMarkStandard(ctx){
+  const aiItems=[];
   ctx.subs.forEach(sub=>{
     const results=ctx.host.questions.map((q,i)=>markOne(q,sub.answers?.[i]));
     const claim=state.jokerClaims.find(j=>j.teamUid===sub.teamUid&&j.roundId===ctx.round.id);
-    const team=state.teams.find(t=>t.uid===sub.teamUid);const mult=claim&&!team?.jokerUsedRoundId?2:1;
-    state.marks.set(sub.teamUid,{results,mult,sub});renderTeamMarks(sub.teamUid,ctx.host.questions,results,mult);
+    const team=state.teams.find(t=>t.uid===sub.teamUid);
+    const mult=claim&&!team?.jokerUsedRoundId?2:1;
+    state.marks.set(sub.teamUid,{results,mult,sub});
+    renderTeamMarks(sub.teamUid,ctx.host.questions,results,mult);
+
+    ctx.host.questions.forEach((q,i)=>{
+      const mode=q.answerMode||'text';
+      const response=sub.answers?.[i];
+      const result=results[i];
+      if(mode!=='text'||result.status==='correct')return;
+      const answer=String(response??'').trim();
+      if(!answer)return;
+      aiItems.push({
+        id:sub.id+':'+i,
+        teamUid:sub.teamUid,
+        questionIndex:i,
+        question:q.prompt||('Question '+(i+1)),
+        expectedAnswers:(q.accepted||[]).map(String).filter(Boolean),
+        studentAnswer:answer
+      });
+    });
   });
+
+  if(!aiItems.length){
+    toast('Automatic marking complete — no AI checks needed');
+    return;
+  }
+
+  toast('Checking '+aiItems.length+' answer'+(aiItems.length===1?'':'s')+' with AI…');
+  const judgements=await judgeQuizAnswers(aiItems);
+
+  for(const item of aiItems){
+    const judgement=judgements.get(item.id);
+    if(!judgement)continue;
+    const entry=state.marks.get(item.teamUid);
+    const res=entry?.results?.[item.questionIndex];
+    const q=ctx.host.questions[item.questionIndex];
+    if(!entry||!res||!q)continue;
+    if(judgement.verdict==='correct'){
+      res.points=Number(q.points??1);
+      res.status='correct';
+      res.note='AI accepted: '+judgement.reason;
+    }else if(judgement.verdict==='review'){
+      res.points=0;
+      res.status='review';
+      res.note='AI review: '+judgement.reason;
+    }else{
+      res.points=0;
+      res.status='wrong';
+      res.note='AI checked: '+judgement.reason;
+    }
+  }
+
+  for(const sub of ctx.subs){
+    const entry=state.marks.get(sub.teamUid);
+    if(entry)renderTeamMarks(sub.teamUid,ctx.host.questions,entry.results,entry.mult);
+  }
+
+  const reviews=[...state.marks.values()].reduce((n,e)=>n+e.results.filter(r=>r.status==='review').length,0);
+  toast(reviews?'AI marking complete — '+reviews+' answer'+(reviews===1?'':'s')+' need teacher review':'AI marking complete');
 }
 function autoMarkClosest(ctx){
   const scoring=ctx.host.closestScoring||[3,2,1];const resultsByTeam=new Map(ctx.subs.map(s=>[s.teamUid,ctx.host.questions.map(()=>({points:0,status:'wrong',note:''}))]));
