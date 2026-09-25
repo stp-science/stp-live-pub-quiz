@@ -6,8 +6,8 @@ import {
 import {
   $, $$, escapeHtml, randomCode, randomId, inputDescriptor, sampleQuiz,
   markOne, formatScore, mediaEmbed
-} from './core.js?v=20260924-micro1';
-import { judgeQuizAnswers } from './ai-marking.js?v=20260924-ai-fallback1';
+} from './core.js?v=20260925-markfix1';
+import { judgeQuizAnswers } from './ai-marking.js?v=20260925-markfix1';
 
 const state = {
   user:null, quizzes:[], quiz:null, rounds:[], hostRounds:new Map(), teams:[], submissions:[], jokerClaims:[],
@@ -106,7 +106,7 @@ async function selectQuiz(id){
 }
 
 async function ensureBuiltInQuizContent(id){
-  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=12)return;
+  if(state.quiz?.title!=='Year 9 & 10 Pub Quiz 2026' || Number(state.quiz?.contentVersion||0)>=13)return;
   try{
     const roundsSnap=await getDocs(collection(db,'quizzes',id,'rounds'));
     const batch=writeBatch(db);
@@ -154,7 +154,7 @@ async function ensureBuiltInQuizContent(id){
 
       if(title==='Watch Closely'){
         const newQuestions=[
-        {id:'watch1',prompt:'After using the toothbrushes in his ears, what does Paddington do with what comes out?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['licks it','lick it','tastes it','taste it','eats it','puts it in his mouth','puts them in his mouth'],points:1},
+        {id:'watch1',prompt:'After using the toothbrushes in his ears, what does Paddington do with what comes out?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['licks it','lick it','tastes it','taste it','eats it','puts it in his mouth','puts them in his mouth','licks the earwax','licks earwax','licks the ear wax','licks the wax','eats the earwax','eats earwax','puts earwax in his mouth','puts the earwax in his mouth','puts the ear wax in his mouth','puts the wax in his mouth'],points:1},
         {id:'watch2',prompt:'What liquid does Paddington drink just before putting his head into the toilet?',mediaUrl:'',answerMode:'text',accepted:['mouthwash','mouth wash'],points:1},
         {id:'watch3',prompt:'What does Paddington use as a shield when the shower head turns on him?',mediaUrl:'',answerMode:'text',accepted:['toilet lid','toilet seat lid','toilet seat','lid','the toilet lid'],points:1},
         {id:'watch4',prompt:'What happens to the shower head after Paddington turns the shower on?',mediaUrl:'',answerMode:'text',accepted:['comes loose','it comes loose','comes off','it comes off','flies around','it flies around','sprays around','it sprays around','comes loose and sprays around','flies around spraying water'],points:1},
@@ -171,10 +171,10 @@ async function ensureBuiltInQuizContent(id){
       }
     }
 
-    batch.update(doc(db,'quizzes',id),{contentVersion:12,updatedAt:serverTimestamp()});
+    batch.update(doc(db,'quizzes',id),{contentVersion:13,updatedAt:serverTimestamp()});
     await batch.commit();
     state.hostRounds.clear();
-    state.quiz.contentVersion=12;
+    state.quiz.contentVersion=13;
     if(changed)toast('Quiz media links updated');
   }catch(e){
     console.error('Quiz content update failed',e);
@@ -507,7 +507,7 @@ async function autoMarkStandard(ctx){
     const results=ctx.host.questions.map((q,i)=>markOne(q,sub.answers?.[i]));
     const claim=state.jokerClaims.find(j=>j.teamUid===sub.teamUid&&j.roundId===ctx.round.id);
     const team=state.teams.find(t=>t.uid===sub.teamUid);
-    const mult=claim&&!team?.jokerUsedRoundId?2:1;
+    const mult=claim&&(!team?.jokerUsedRoundId||team.jokerUsedRoundId===ctx.round.id)?2:1;
     state.marks.set(sub.teamUid,{results,mult,sub});
     renderTeamMarks(sub.teamUid,ctx.host.questions,results,mult);
 
@@ -588,24 +588,78 @@ function renderTeamMarks(uid,questions,results,mult){
   const box=$(`#mark-${CSS.escape(uid)}`);if(!box)return;
   const sub=state.marks.get(uid)?.sub;box.innerHTML=questions.map((q,i)=>{const res=results[i],answer=hostResponseText(sub.answers?.[i]);return `<div class="answer-row ${res.status}"><div class="mark-grid"><div><strong>Q${i+1}</strong><div class="muted tiny">${escapeHtml(q.prompt)}</div></div><div><div>Team: <strong>${escapeHtml(answer)}</strong></div><div class="muted tiny">${escapeHtml(res.note||'')}</div></div><div class="field"><label>Points</label><input type="number" min="0" step="0.5" value="${res.points}" data-mark-uid="${uid}" data-mark-i="${i}"></div></div></div>`}).join('');
   const raw=results.reduce((s,r)=>s+Number(r.points||0),0);$(`[data-team-total="${CSS.escape(uid)}"]`).textContent=`${formatScore(raw)}${mult===2?' × 2 joker':''}`;
-  $$(`[data-mark-uid="${CSS.escape(uid)}"]`).forEach(inp=>inp.oninput=()=>{const entry=state.marks.get(uid);entry.results[Number(inp.dataset.markI)].points=Number(inp.value||0);const raw2=entry.results.reduce((s,r)=>s+Number(r.points||0),0);$(`[data-team-total="${CSS.escape(uid)}"]`).textContent=`${formatScore(raw2)}${entry.mult===2?' × 2 joker':''}`;});
+  $(`[data-mark-uid="${CSS.escape(uid)}"]`).forEach(inp=>inp.oninput=()=>{
+    const entry=state.marks.get(uid);
+    const qi=Number(inp.dataset.markI);
+    const points=Number(inp.value||0);
+    const res=entry.results[qi];
+    const max=Number(questions[qi]?.points??1);
+    res.points=points;
+    res.status=points<=0?'wrong':points>=max?'correct':'partial';
+    res.note='Teacher adjusted';
+    const raw2=entry.results.reduce((s,r)=>s+Number(r.points||0),0);
+    $(`[data-team-total="${CSS.escape(uid)}"]`).textContent=`${formatScore(raw2)}${entry.mult===2?' × 2 joker':''}`;
+  });
 }
 
 $('#saveMarksBtn').onclick=async()=>{
-  const ctx=state.markContext;if(!ctx||!state.marks.size)return;
-  const existingMarked=state.submissions.filter(s=>s.marked&&s.roundId!==ctx.round.id);
-  const totals=new Map(state.teams.map(t=>[t.uid,Number(t.manualAdjustment||0)]));
-  existingMarked.forEach(s=>totals.set(s.teamUid,(totals.get(s.teamUid)||0)+Number(s.score||0)));
-  const batch=writeBatch(db);
-  for(const [uid,entry] of state.marks){
-    const raw=entry.results.reduce((s,r)=>s+Number(r.points||0),0),score=raw*entry.mult;
-    totals.set(uid,(totals.get(uid)||0)+score);
-    batch.update(doc(db,'quizzes',quizId(),'submissions',entry.sub.id),{marked:true,markResults:entry.results,rawScore:raw,jokerMultiplier:entry.mult,score,markedAt:serverTimestamp()});
-    if(entry.mult===2) batch.update(doc(db,'quizzes',quizId(),'teams',uid),{jokerUsedRoundId:ctx.round.id});
+  const ctx=state.markContext;
+  if(!ctx||!state.marks.size)return;
+
+  const btn=$('#saveMarksBtn');
+  btn.disabled=true;
+  btn.textContent='Saving…';
+
+  try{
+    // Read the current Firestore totals immediately before saving.
+    // Then replace only this round's old contribution with the newly marked score.
+    // This preserves every other round and any manual score adjustment.
+    const fresh=await Promise.all([...state.marks.entries()].map(async([uid,entry])=>{
+      const teamRef=doc(db,'quizzes',quizId(),'teams',uid);
+      const subRef=doc(db,'quizzes',quizId(),'submissions',entry.sub.id);
+      const [teamSnap,subSnap]=await Promise.all([getDoc(teamRef),getDoc(subRef)]);
+      if(!teamSnap.exists()||!subSnap.exists())throw new Error('Team or submission no longer exists for '+teamName(uid));
+
+      const teamData=teamSnap.data()||{};
+      const subData=subSnap.data()||{};
+      const raw=entry.results.reduce((s,r)=>s+Number(r.points||0),0);
+      const score=raw*entry.mult;
+      const oldRoundScore=subData.marked?Number(subData.score||0):0;
+      const currentTotal=Number(teamData.totalScore||0);
+      const newTotal=currentTotal-oldRoundScore+score;
+
+      return{uid,entry,teamRef,subRef,raw,score,newTotal};
+    }));
+
+    const batch=writeBatch(db);
+    for(const item of fresh){
+      batch.update(item.subRef,{
+        marked:true,
+        markResults:item.entry.results,
+        rawScore:item.raw,
+        jokerMultiplier:item.entry.mult,
+        score:item.score,
+        markedAt:serverTimestamp()
+      });
+      const teamUpdate={totalScore:item.newTotal};
+      if(item.entry.mult===2)teamUpdate.jokerUsedRoundId=ctx.round.id;
+      batch.update(item.teamRef,teamUpdate);
+      batch.set(doc(db,'quizzes',quizId(),'leaderboard',item.uid),{
+        name:teamName(item.uid),
+        score:item.newTotal
+      },{merge:true});
+    }
+
+    batch.update(doc(db,'quizzes',quizId(),'rounds',ctx.round.id),{status:'marked'});
+    await batch.commit();
+    toast('Scores saved safely');
+  }catch(e){
+    console.error('Save scores failed',e);
+    toast('Could not save scores: '+(e?.message||e));
+    btn.disabled=false;
+  }finally{
+    btn.textContent='Save scores';
   }
-  state.teams.forEach(t=>{const score=totals.get(t.uid)||0;batch.update(doc(db,'quizzes',quizId(),'teams',t.uid),{totalScore:score});batch.set(doc(db,'quizzes',quizId(),'leaderboard',t.uid),{name:t.name,score},{merge:true});});
-  batch.update(doc(db,'quizzes',quizId(),'rounds',ctx.round.id),{status:'marked'});
-  await batch.commit();toast('Scores saved');$('#saveMarksBtn').disabled=true;
 };
 
 function renderLeaderboard(){
