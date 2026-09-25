@@ -69,6 +69,13 @@ export function markOne(question,response){
   const accepted=(question.accepted||[]).map(normalizeAnswer).filter(Boolean),got=normalizeAnswer(response);
   if(accepted.includes(got))return{points:max,status:'correct',note:'Exact accepted answer'};
 
+  // Accept an expected answer when it appears as a complete phrase inside a
+  // longer natural response, e.g. "he drinks the mouthwash" → "mouthwash".
+  // Keep this to answers of 4+ characters to avoid unsafe one-letter matches.
+  const paddedGot=' '+got+' ';
+  const phraseMatch=accepted.find(key=>key.length>=4&&paddedGot.includes(' '+key+' '));
+  if(phraseMatch)return{points:max,status:'correct',note:`Accepted natural wording → ${phraseMatch}`};
+
   let bestScore=0,bestDistance=Infinity,bestKey='';
   for(const key of accepted){
     const dist=typoDistance(got,key),score=similarity(got,key);
@@ -132,7 +139,7 @@ export function mediaEmbed(url=''){
   return`<img class="question-media" src="${safe}" alt="Question media">`;
 }
 export const sampleQuiz={
-  contentVersion:12,
+  contentVersion:13,
   title:'Year 9 & 10 Pub Quiz 2026',
   settings:{jokersPerTeam:1,revealTopN:5,allowTeamNames:true},
   rounds:[
@@ -192,7 +199,7 @@ export const sampleQuiz={
       instructions:'Play the Paddington bathroom clip once. Students watch only — do not show the questions until the clip finishes. Do not replay until all answers are submitted.',
       jokerAllowed:true,
       questions:[
-        {id:'watch1',prompt:'After using the toothbrushes in his ears, what does Paddington do with what comes out?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['licks it','lick it','tastes it','taste it','eats it','puts it in his mouth','puts them in his mouth'],points:1},
+        {id:'watch1',prompt:'After using the toothbrushes in his ears, what does Paddington do with what comes out?',mediaUrl:'https://www.dailymotion.com/video/x7uzno3',hostLink:'https://www.dailymotion.com/video/x7uzno3',hostLinkLabel:'Open Paddington clip',answerMode:'text',accepted:['licks it','lick it','tastes it','taste it','eats it','puts it in his mouth','puts them in his mouth','licks the earwax','licks earwax','licks the ear wax','licks the wax','eats the earwax','eats earwax','puts earwax in his mouth','puts the earwax in his mouth','puts the ear wax in his mouth','puts the wax in his mouth'],points:1},
         {id:'watch2',prompt:'What liquid does Paddington drink just before putting his head into the toilet?',mediaUrl:'',answerMode:'text',accepted:['mouthwash','mouth wash'],points:1},
         {id:'watch3',prompt:'What does Paddington use as a shield when the shower head turns on him?',mediaUrl:'',answerMode:'text',accepted:['toilet lid','toilet seat lid','toilet seat','lid','the toilet lid'],points:1},
         {id:'watch4',prompt:'What happens to the shower head after Paddington turns the shower on?',mediaUrl:'',answerMode:'text',accepted:['comes loose','it comes loose','comes off','it comes off','flies around','it flies around','sprays around','it sprays around','comes loose and sprays around','flies around spraying water'],points:1},
